@@ -6,6 +6,8 @@
 
 void ast_block_update(off_t block_ofset, VGMSTREAM * vgmstream);
 
+void mxch_block_update(off_t block_ofset, VGMSTREAM * vgmstream);
+
 void render_vgmstream_blocked(sample * buffer, int32_t sample_count, VGMSTREAM * vgmstream);
 
 void halpst_block_update(off_t block_ofset, VGMSTREAM * vgmstream);
@@ -42,6 +44,8 @@ void thp_block_update(off_t block_offset, VGMSTREAM * vgmstream);
 
 void filp_block_update(off_t block_offset, VGMSTREAM * vgmstream);
 
+void ivaud_block_update(off_t block_offset, VGMSTREAM * vgmstream);
+
 void render_vgmstream_interleave(sample * buffer, int32_t sample_count, VGMSTREAM * vgmstream);
 
 void render_vgmstream_nolayout(sample * buffer, int32_t sample_count, VGMSTREAM * vgmstream);
@@ -53,5 +57,23 @@ void render_vgmstream_mus_acm(sample * buffer, int32_t sample_count, VGMSTREAM *
 void render_vgmstream_aix(sample * buffer, int32_t sample_count, VGMSTREAM * vgmstream);
 
 void render_vgmstream_aax(sample * buffer, int32_t sample_count, VGMSTREAM * vgmstream);
+
+void render_vgmstream_scd_int(sample * buffer, int32_t sample_count, VGMSTREAM * vgmstream);
+
+void psx_mgav_block_update(off_t block_offset, VGMSTREAM * vgmstream);
+
+void ps2_adm_block_update(off_t block_offset, VGMSTREAM * vgmstream);
+
+void dsp_bdsp_block_update(off_t block_offset, VGMSTREAM * vgmstream);
+
+void tra_block_update(off_t block_offset, VGMSTREAM * vgmstream);
+
+void mtaf_block_update(off_t block_offset, VGMSTREAM * vgmstream);
+
+void ps2_iab_block_update(off_t block_offset, VGMSTREAM * vgmstream);
+
+void ps2_strlr_block_update(off_t block_offset, VGMSTREAM * vgmstream);
+
+void ps2_mtaf_block_update(off_t block_ofset, VGMSTREAM * vgmstream);
 
 #endif

@@ -52,6 +52,9 @@ void render_vgmstream_blocked(sample * buffer, int32_t sample_count, VGMSTREAM *
                 case layout_ast_blocked:
                     ast_block_update(vgmstream->next_block_offset,vgmstream);
                     break;
+				case layout_mxch_blocked:
+                    mxch_block_update(vgmstream->next_block_offset,vgmstream);
+                    break;
                 case layout_halpst_blocked:
                     if (vgmstream->next_block_offset>=0)
                         halpst_block_update(vgmstream->next_block_offset,vgmstream);
@@ -105,6 +108,27 @@ void render_vgmstream_blocked(sample * buffer, int32_t sample_count, VGMSTREAM *
 					break;
 				case layout_filp_blocked:
 					filp_block_update(vgmstream->next_block_offset,vgmstream);
+					break;
+				case layout_ivaud_blocked:
+					ivaud_block_update(vgmstream->next_block_offset,vgmstream);
+					break;
+				case layout_psx_mgav_blocked:
+					psx_mgav_block_update(vgmstream->next_block_offset,vgmstream);
+					break;
+				case layout_ps2_adm_blocked:
+					ps2_adm_block_update(vgmstream->next_block_offset,vgmstream);
+					break;
+				case layout_dsp_bdsp_blocked:
+					dsp_bdsp_block_update(vgmstream->next_block_offset,vgmstream);
+					break;
+				case layout_tra_blocked:
+					tra_block_update(vgmstream->next_block_offset,vgmstream);
+					break;
+				case layout_ps2_iab_blocked:
+					ps2_iab_block_update(vgmstream->next_block_offset,vgmstream);
+					break;
+				case layout_ps2_strlr_blocked:
+					ps2_strlr_block_update(vgmstream->next_block_offset,vgmstream);
 					break;
 				default:
                     break;

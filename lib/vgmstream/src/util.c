@@ -69,6 +69,18 @@ void put_32bitLE(uint8_t * buf, int32_t i) {
     buf[3] = (uint8_t)((i >> 24) & 0xFF);
 }
 
+void put_16bitBE(uint8_t * buf, int16_t i) {
+    buf[0] = i >> 8;
+    buf[1] = (i & 0xFF);
+}
+
+void put_32bitBE(uint8_t * buf, int32_t i) {
+    buf[0] = (uint8_t)((i >> 24) & 0xFF);
+    buf[1] = (uint8_t)((i >> 16) & 0xFF);
+    buf[2] = (uint8_t)((i >> 8) & 0xFF);
+    buf[3] = (uint8_t)(i & 0xFF);
+}
+
 /* make a header for PCM .wav */
 /* buffer must be 0x2c bytes */
 void make_wav_header(uint8_t * buf, int32_t sample_count, int32_t sample_rate, int channels) {
@@ -113,6 +125,17 @@ void make_wav_header(uint8_t * buf, int32_t sample_count, int32_t sample_rate, i
     memcpy(buf+0x24, "data", 4);
     /* size of WAVE data chunk */
     put_32bitLE(buf+0x28, (int32_t)bytecount);
+}
+
+void swap_samples_le(sample *buf, int count) {
+    int i;
+    for (i=0;i<count;i++) {
+        uint8_t b0 = buf[i]&0xff;
+        uint8_t b1 = buf[i]>>8;
+        uint8_t *p = (uint8_t*)&(buf[i]);
+        p[0] = b0;
+        p[1] = b1;
+    }
 }
 
 /* length is maximum length of dst. dst will always be null-terminated if

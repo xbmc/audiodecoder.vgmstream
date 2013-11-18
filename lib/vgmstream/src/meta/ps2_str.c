@@ -34,6 +34,9 @@ VGMSTREAM * init_vgmstream_ps2_str(STREAMFILE *streamFile) {
 	/* with others .STR file as it is a very common extension */
 	if (!infileSTH) goto fail;
 
+	if(read_32bitLE(0x2C,infileSTH)==0)
+		goto fail;
+
 	if((read_32bitLE(0x2C,infileSTH)==0x07) ||
 	   (read_32bitLE(0x2C,infileSTH)==0x06))
 		channel_count=2;
@@ -78,6 +81,7 @@ VGMSTREAM * init_vgmstream_ps2_str(STREAMFILE *streamFile) {
 
             vgmstream->ch[i].channel_start_offset=
                 vgmstream->ch[i].offset+=(off_t)(vgmstream->interleave_block_size*i);
+
         }
     }
 

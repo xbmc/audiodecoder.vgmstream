@@ -4,12 +4,6 @@
 #include "streamfile.h"
 #include "util.h"
 
-#ifdef _WIN32
-#define IS_VALID_STREAM(stream)     (stream != NULL && (stream->_ptr != NULL))
-#else
-#define IS_VALID_STREAM(stream)     (stream)
-#endif
-
 typedef struct {
     STREAMFILE sf;
     FILE * infile;
@@ -129,7 +123,8 @@ static off_t get_offset_stdio(STDIOSTREAMFILE *streamFile) {
 }
 
 static void get_name_stdio(STDIOSTREAMFILE *streamfile,char *buffer,size_t length) {
-    strcpy(buffer,streamfile->name);
+    strncpy(buffer,streamfile->name,length);
+    buffer[length-1]='\0';
 }
 
 #ifdef PROFILE_STREAMFILE
@@ -150,7 +145,7 @@ static STREAMFILE *open_stdio(STDIOSTREAMFILE *streamFile,const char * const fil
         return NULL;
     // if same name, duplicate the file pointer we already have open
     if (!strcmp(streamFile->name,filename)) {
-        if (IS_VALID_STREAM(streamFile->infile) && ((newfd = dup(fileno(streamFile->infile))) >= 0) &&
+        if (((newfd = dup(fileno(streamFile->infile))) >= 0) &&
             (newfile = fdopen( newfd, "rb" ))) 
         {
             newstreamFile = open_stdio_streamfile_buffer_by_FILE(newfile,filename,buffersize);
@@ -196,7 +191,8 @@ static STREAMFILE * open_stdio_streamfile_buffer_by_FILE(FILE *infile,const char
     streamfile->buffersize = buffersize;
     streamfile->buffer = buffer;
 
-    strcpy(streamfile->name,filename);
+    strncpy(streamfile->name,filename,sizeof(streamfile->name));
+    streamfile->name[sizeof(streamfile->name)-1] = '\0';
 
     return &streamfile->sf;
 }

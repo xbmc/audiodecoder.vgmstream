@@ -16,18 +16,20 @@
 #include "streamtypes.h"
 #include "util.h"
 
-#if defined(__MSVCRT__) || defined(_MSC_VER) || defined(XBMC)
+#if defined(__MSVCRT__) || defined(_MSC_VER)
+#include <io.h>
 #define fseeko fseek
 #define ftello ftell
-#endif
-#if defined(__MSVCRT__) || defined(_MSC_VER) 
-#include <io.h>
 #define dup _dup
 #ifdef fileno
 #undef fileno
 #endif
 #define fileno _fileno
 #define fdopen _fdopen
+#endif
+
+#if defined(XBMC)
+#define fseeko fseek
 #endif
 
 #define STREAMFILE_DEFAULT_BUFFER_SIZE 0x400

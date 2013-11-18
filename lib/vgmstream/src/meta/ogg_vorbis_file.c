@@ -18,7 +18,7 @@ static size_t read_func(void *ptr, size_t size, size_t nmemb, void * datasource)
 
     size_t bytes_read;
    
-    bytes_read = read_streamfile(ptr, ov_streamfile->offset, size * nmemb,
+    bytes_read = read_streamfile(ptr, ov_streamfile->offset + ov_streamfile->other_header_bytes, size * nmemb,
             ov_streamfile->streamfile);
 
     items_read = bytes_read / size;
@@ -35,7 +35,7 @@ static size_t read_func_um3(void *ptr, size_t size, size_t nmemb, void * datasou
 
     size_t bytes_read;
    
-    bytes_read = read_streamfile(ptr, ov_streamfile->offset, size * nmemb,
+    bytes_read = read_streamfile(ptr, ov_streamfile->offset + ov_streamfile->other_header_bytes, size * nmemb,
             ov_streamfile->streamfile);
 
     items_read = bytes_read / size;
@@ -55,6 +55,80 @@ static size_t read_func_um3(void *ptr, size_t size, size_t nmemb, void * datasou
     return items_read;
 }
 
+static size_t read_func_kovs(void *ptr, size_t size, size_t nmemb, void * datasource)
+{
+    ogg_vorbis_streamfile * const ov_streamfile = datasource;
+    size_t items_read;
+
+    size_t bytes_read;
+   
+    bytes_read = read_streamfile(ptr, ov_streamfile->offset+ov_streamfile->other_header_bytes, size * nmemb,
+            ov_streamfile->streamfile);
+
+    items_read = bytes_read / size;
+
+    /* first 0x100 bytes of KOVS are xor'd with offset */
+    if (ov_streamfile->offset < 0x100) {
+        int i;
+
+        for (i=ov_streamfile->offset;i<0x100;i++)
+            ((uint8_t*)ptr)[i-ov_streamfile->offset] ^= i;
+    }
+
+    ov_streamfile->offset += items_read * size;
+
+    return items_read;
+}
+
+static size_t read_func_scd(void *ptr, size_t size, size_t nmemb, void * datasource)
+{
+    ogg_vorbis_streamfile * const ov_streamfile = datasource;
+    size_t items_read;
+
+    size_t bytes_read;
+   
+    bytes_read = read_streamfile(ptr, ov_streamfile->offset + ov_streamfile->other_header_bytes, size * nmemb,
+            ov_streamfile->streamfile);
+
+    items_read = bytes_read / size;
+
+    /* first bytes are xor'd with a constant byte */
+    if (ov_streamfile->offset < ov_streamfile->scd_xor_len) {
+        int num_crypt = ov_streamfile->scd_xor_len-ov_streamfile->offset;
+        int i;
+
+        if (num_crypt > bytes_read) num_crypt=bytes_read;
+        for (i=0;i<num_crypt;i++)
+            ((uint8_t*)ptr)[i] ^= ov_streamfile->scd_xor;
+    }
+
+    ov_streamfile->offset += items_read * size;
+
+    return items_read;
+}
+
+static size_t read_func_psych(void *ptr, size_t size, size_t nmemb, void * datasource)
+{
+    ogg_vorbis_streamfile * const ov_streamfile = datasource;
+    size_t items_read;
+
+    size_t bytes_read;
+    size_t i;
+   
+    bytes_read = read_streamfile(ptr, ov_streamfile->offset + ov_streamfile->other_header_bytes, size * nmemb,
+            ov_streamfile->streamfile);
+
+    /* add 0x23 ('#') */
+    for (i=0;i<bytes_read;i++)
+        ((uint8_t*)ptr)[i] += 0x23;
+
+    items_read = bytes_read / size;
+
+    ov_streamfile->offset += items_read * size;
+
+    return items_read;
+}
+
 static int seek_func(void *datasource, ogg_int64_t offset, int whence) {
     ogg_vorbis_streamfile * const ov_streamfile = datasource;
     ogg_int64_t base_offset;
@@ -68,7 +142,7 @@ static int seek_func(void *datasource, ogg_int64_t offset, int whence) {
             base_offset = ov_streamfile->offset;
             break;
         case SEEK_END:
-            base_offset = ov_streamfile->size;
+            base_offset = ov_streamfile->size - ov_streamfile->other_header_bytes;
             break;
         default:
             return -1;
@@ -76,7 +150,7 @@ static int seek_func(void *datasource, ogg_int64_t offset, int whence) {
     }
 
     new_offset = base_offset + offset;
-    if (new_offset < 0 || new_offset > ov_streamfile->size) {
+    if (new_offset < 0 || new_offset > (ov_streamfile->size - ov_streamfile->other_header_bytes)) {
         return -1;
     } else {
         ov_streamfile->offset = new_offset;
@@ -97,26 +171,17 @@ static int close_func(void * datasource) {
 /* Ogg Vorbis, by way of libvorbisfile */
 
 VGMSTREAM * init_vgmstream_ogg_vorbis(STREAMFILE *streamFile) {
-    VGMSTREAM * vgmstream = NULL;
     char filename[260];
 
     ov_callbacks callbacks;
-    OggVorbis_File temp_ovf;
-    ogg_vorbis_streamfile temp_streamfile;
 
-    ogg_vorbis_codec_data * data = NULL;
-    OggVorbis_File *ovf;
-    int inited_ovf = 0;
-    vorbis_info *info;
-
-    int loop_flag = 0;
-    int32_t loop_start = 0;
-    int loop_length_found = 0;
-    int32_t loop_length = 0;
-    int loop_end_found = 0;
-    int32_t loop_end = 0;
-
+    off_t other_header_bytes = 0;
     int um3_ogg = 0;
+    int kovs_ogg = 0;
+    int psych_ogg = 0;
+
+    vgm_vorbis_info_t inf;
+    memset(&inf, 0, sizeof(inf));
 
     /* check extension, case insensitive */
     streamFile->get_name(streamFile,filename,sizeof(filename));
@@ -126,33 +191,115 @@ VGMSTREAM * init_vgmstream_ogg_vorbis(STREAMFILE *streamFile) {
        may be renamed to .logg. This meta reader should still support .ogg,
        though. */
     if (strcasecmp("logg",filename_extension(filename)) &&
-            strcasecmp("ogg",filename_extension(filename))
-       ) {
-        if(!strcasecmp("um3",filename_extension(filename))) {
+            strcasecmp("ogg",filename_extension(filename))) {
+        if (!strcasecmp("um3",filename_extension(filename))) {
             um3_ogg = 1;
+        } else if (!strcasecmp("kovs",filename_extension(filename))) {
+            kovs_ogg = 1;
+        } else {
+            goto fail;
         }
-        else goto fail;
     }
 
     /* not all um3-ogg are crypted */
-    if (um3_ogg && read_32bitBE(0x0,streamFile)==0x4f676753) um3_ogg = 0;
+    if (um3_ogg && read_32bitBE(0x0,streamFile)==0x4f676753) {
+        um3_ogg = 0;
+    }
 
-    if (um3_ogg)
+    /* use KOVS header */
+    if (kovs_ogg) {
+        if (read_32bitBE(0x0,streamFile)!=0x4b4f5653) { /* "KOVS" */
+            goto fail;
+        }
+        if (read_32bitLE(0x8,streamFile)!=0) {
+            inf.loop_start = read_32bitLE(0x8,streamFile);
+            inf.loop_flag = 1;
+        }
+
+        other_header_bytes = 0x20;
+    }
+
+    /* detect Psychic Software obfuscation (as seen in "Darkwind") */
+    if (read_32bitBE(0x0,streamFile)==0x2c444430) {
+        psych_ogg = 1;
+    }
+
+    if (um3_ogg) {
         callbacks.read_func = read_func_um3;
-    else
+    } else if (kovs_ogg) {
+        callbacks.read_func = read_func_kovs;
+    } else if (psych_ogg) {
+        callbacks.read_func = read_func_psych;
+    } else {
         callbacks.read_func = read_func;
+    }
     callbacks.seek_func = seek_func;
     callbacks.close_func = close_func;
     callbacks.tell_func = tell_func;
 
+    if (um3_ogg) {
+        inf.meta_type = meta_um3_ogg;
+    } else if (kovs_ogg) {
+        inf.meta_type = meta_KOVS_ogg;
+    } else if (psych_ogg) {
+        inf.meta_type = meta_psych_ogg;
+    } else {
+        inf.meta_type = meta_ogg_vorbis;
+    }
+
+    inf.layout_type = layout_ogg_vorbis;
+
+    return init_vgmstream_ogg_vorbis_callbacks(streamFile, filename, &callbacks, other_header_bytes, &inf);
+
+fail:
+    return NULL;
+}
+
+VGMSTREAM * init_vgmstream_ogg_vorbis_callbacks(STREAMFILE *streamFile, const char * filename, ov_callbacks *callbacks_p, off_t other_header_bytes, const vgm_vorbis_info_t *vgm_inf) {
+    VGMSTREAM * vgmstream = NULL;
+
+    OggVorbis_File temp_ovf;
+    ogg_vorbis_streamfile temp_streamfile;
+
+    ogg_vorbis_codec_data * data = NULL;
+    OggVorbis_File *ovf;
+    int inited_ovf = 0;
+    vorbis_info *info;
+
+    int loop_flag = vgm_inf->loop_flag;
+    int32_t loop_start = vgm_inf->loop_start;
+    int loop_length_found = vgm_inf->loop_length_found;
+    int32_t loop_length = vgm_inf->loop_length;
+    int loop_end_found = vgm_inf->loop_end_found;
+    int32_t loop_end = vgm_inf->loop_end;
+
+    ov_callbacks default_callbacks;
+
+    if (!callbacks_p) {
+        default_callbacks.read_func = read_func;
+        default_callbacks.seek_func = seek_func;
+        default_callbacks.close_func = close_func;
+        default_callbacks.tell_func = tell_func;
+
+        if (vgm_inf->scd_xor != 0) {
+            default_callbacks.read_func = read_func_scd;
+        }
+
+        callbacks_p = &default_callbacks;
+    }
+
     temp_streamfile.streamfile = streamFile;
     temp_streamfile.offset = 0;
     temp_streamfile.size = get_streamfile_size(temp_streamfile.streamfile);
+    temp_streamfile.other_header_bytes = other_header_bytes;
+    temp_streamfile.scd_xor  = vgm_inf->scd_xor;
+    temp_streamfile.scd_xor_len = vgm_inf->scd_xor_len;
 
     /* can we open this as a proper ogg vorbis file? */
     memset(&temp_ovf, 0, sizeof(temp_ovf));
     if (ov_test_callbacks(&temp_streamfile, &temp_ovf, NULL,
-            0, callbacks)) goto fail;
+            0, *callbacks_p)) goto fail;
+
     /* we have to close this as it has the init_vgmstream meta-reading
        STREAMFILE */
     ov_clear(&temp_ovf);
@@ -166,10 +313,13 @@ VGMSTREAM * init_vgmstream_ogg_vorbis(STREAMFILE *streamFile) {
     if (!data->ov_streamfile.streamfile) goto fail;
     data->ov_streamfile.offset = 0;
     data->ov_streamfile.size = get_streamfile_size(data->ov_streamfile.streamfile);
+    data->ov_streamfile.other_header_bytes = other_header_bytes;
+    data->ov_streamfile.scd_xor  = vgm_inf->scd_xor;
+    data->ov_streamfile.scd_xor_len = vgm_inf->scd_xor_len;
 
     /* open the ogg vorbis file for real */
     if (ov_open_callbacks(&data->ov_streamfile, &data->ogg_vorbis_file, NULL,
-                0, callbacks)) goto fail;
+                0, *callbacks_p)) goto fail;
     ovf = &data->ogg_vorbis_file;
     inited_ovf = 1;
 
@@ -196,6 +346,8 @@ VGMSTREAM * init_vgmstream_ogg_vorbis(STREAMFILE *streamFile) {
                     comment->user_comments[i] ||
                 strstr(comment->user_comments[i],"um3.stream.looppoint.start=")==
                     comment->user_comments[i] ||
+                strstr(comment->user_comments[i],"LOOP_BEGIN=")==
+                    comment->user_comments[i] ||
                 strstr(comment->user_comments[i],"LoopStart=")==
                     comment->user_comments[i]
                     ) {
@@ -221,6 +373,13 @@ VGMSTREAM * init_vgmstream_ogg_vorbis(STREAMFILE *streamFile) {
                 loop_end_found=1;
             }
             else if (strstr(comment->user_comments[i],"LoopEnd=")==
+                    comment->user_comments[i]) {
+						if(loop_flag) {
+							loop_length=atol(strrchr(comment->user_comments[i],'=')+1)-loop_start;
+							loop_length_found=1;
+						}
+            }
+            else if (strstr(comment->user_comments[i],"LOOP_END=")==
                     comment->user_comments[i]) {
 						if(loop_flag) {
 							loop_length=atol(strrchr(comment->user_comments[i],'=')+1)-loop_start;
@@ -265,11 +424,8 @@ VGMSTREAM * init_vgmstream_ogg_vorbis(STREAMFILE *streamFile) {
             vgmstream->loop_end_sample = vgmstream->num_samples;
     }
     vgmstream->coding_type = coding_ogg_vorbis;
-    vgmstream->layout_type = layout_ogg_vorbis;
-    if (um3_ogg)
-        vgmstream->meta_type = meta_um3_ogg;
-    else
-        vgmstream->meta_type = meta_ogg_vorbis;
+    vgmstream->layout_type = vgm_inf->layout_type;
+    vgmstream->meta_type = vgm_inf->meta_type;
 
     return vgmstream;
 

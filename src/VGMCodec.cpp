@@ -127,33 +127,45 @@ struct VGMContext
 static size_t read_XBMC(struct _STREAMFILE* streamfile, uint8_t* dest, off_t offset, size_t length)
 {
   VGMContext *ctx = (VGMContext*) streamfile;
-  XBMC->SeekFile(ctx->file, offset, SEEK_SET);
-  XBMC->ReadFile(ctx->file, dest, length);
+  if (ctx && ctx->file && XBMC)
+  {
+    XBMC->SeekFile(ctx->file, offset, SEEK_SET);
+    return XBMC->ReadFile(ctx->file, dest, length);
+  }
+  return 0;
 }
 
 static void close_XBMC(struct _STREAMFILE* streamfile)
 {
   VGMContext *ctx = (VGMContext*) streamfile;
-  XBMC->CloseFile(ctx->file);
+  if (ctx && ctx->file && XBMC)
+    XBMC->CloseFile(ctx->file);
   delete ctx;
 }
 
 static size_t get_size_XBMC(struct _STREAMFILE* streamfile)
 {
   VGMContext *ctx = (VGMContext*) streamfile;
-  return XBMC->GetFilePosition(ctx->file);
+  if (ctx && ctx->file && XBMC)
+    return XBMC->GetFilePosition(ctx->file);
+
+  return 0;
 }
 
 static off_t get_offset_XBMC(struct _STREAMFILE* streamfile)
 {
   VGMContext *ctx = (VGMContext*) streamfile;
-  return XBMC->GetFilePosition(ctx->file);
+  if (ctx && ctx->file && XBMC)
+    return XBMC->GetFilePosition(ctx->file);
+
+  return 0;
 }
 
 static void get_name_XBMC(struct _STREAMFILE* streamfile, char* buffer, size_t length)
 {
   VGMContext *ctx = (VGMContext*) streamfile;
-  strcpy(buffer, ctx->name);
+  if (ctx)
+    strcpy(buffer, ctx->name);
 }
 
 static struct _STREAMFILE* open_XBMC(struct _STREAMFILE* streamfile, const char* const filename, size_t buffersize)

@@ -9,7 +9,7 @@
 #include "../coding/coding.h"
 #include "../util.h"
 
-static int find_key(STREAMFILE *file, uint16_t *xor_start, uint16_t *xor_mult, uint16_t *xor_add);
+static int find_key(STREAMFILE *file, uint8_t type, uint16_t *xor_start, uint16_t *xor_mult, uint16_t *xor_add);
 
 VGMSTREAM * init_vgmstream_adx(STREAMFILE *streamFile) {
     VGMSTREAM * vgmstream = NULL;
@@ -59,12 +59,20 @@ VGMSTREAM * init_vgmstream_adx(STREAMFILE *streamFile) {
     version_signature = read_16bitBE(0x12,streamFile);
     /* encryption */
     if (version_signature == 0x0408) {
-        if (find_key(streamFile, &xor_start, &xor_mult, &xor_add))
+        if (find_key(streamFile, 8, &xor_start, &xor_mult, &xor_add))
         {
-            coding_type = coding_CRI_ADX_enc;
+            coding_type = coding_CRI_ADX_enc_8;
             version_signature = 0x0400;
         }
     }
+    else if (version_signature == 0x0409) {
+        if (find_key(streamFile, 9, &xor_start, &xor_mult, &xor_add))
+        {
+            coding_type = coding_CRI_ADX_enc_9;
+            version_signature = 0x0400;
+        }
+    }
+
     if (version_signature == 0x0300) {      /* type 03 */
         header_type = meta_ADX_03;
         if (stream_offset-6 >= 0x2c) {   /* enough space for loop info? */
@@ -83,7 +91,11 @@ VGMSTREAM * init_vgmstream_adx(STREAMFILE *streamFile) {
 
         header_type = meta_ADX_04;
         if (stream_offset-ainf_info_length-6 >= 0x38) {   /* enough space for loop info? */
-            loop_flag = (read_32bitBE(0x24,streamFile) != 0);
+		if (read_32bitBE(0x24,streamFile) == 0xFFFEFFFE)
+			loop_flag = 0;
+		else
+			loop_flag = (read_32bitBE(0x24,streamFile) != 0);
+
             loop_start_sample = read_32bitBE(0x28,streamFile);
             loop_start_offset = read_32bitBE(0x2c,streamFile);
             loop_end_sample = read_32bitBE(0x30,streamFile);
@@ -98,6 +110,10 @@ VGMSTREAM * init_vgmstream_adx(STREAMFILE *streamFile) {
 
     /* high-pass cutoff frequency, always 500 that I've seen */
     cutoff = (uint16_t)read_16bitBE(0x10,streamFile);
+
+    if (loop_start_sample == 0 && loop_end_sample == 0) {
+        loop_flag = 0;
+    }
 
     channel_count = read_8bit(7,streamFile);
     vgmstream = allocate_vgmstream(channel_count,loop_flag);
@@ -153,7 +169,8 @@ VGMSTREAM * init_vgmstream_adx(STREAMFILE *streamFile) {
             vgmstream->ch[i].adpcm_coef[0] = coef1;
             vgmstream->ch[i].adpcm_coef[1] = coef2;
 
-            if (coding_type == coding_CRI_ADX_enc)
+            if (coding_type == coding_CRI_ADX_enc_8 ||
+                coding_type == coding_CRI_ADX_enc_9)
             {
                 int j;
                 vgmstream->ch[i].adx_channels = channel_count;
@@ -177,9 +194,10 @@ fail:
 
 /* guessadx stuff */
 
+/* type 8 keys */
 static struct {
     uint16_t start,mult,add;
-} keys[] = {
+} keys_8[] = {
     /* Clover Studio (GOD HAND, Okami) */
     /* I'm pretty sure this is right, based on a decrypted version of some GOD HAND tracks. */
     /* Also it is the 2nd result from guessadx */
@@ -205,7 +223,7 @@ static struct {
     /* this is estimated */
     {0x5deb,0x5f27,0x673f},
 
-    /* G.dev (Senko no Ronde) */
+    /* G.rev 0 (Senko no Ronde) */
     /* this is estimated */
     {0x46d3,0x5ced,0x474d},
 
@@ -223,12 +241,197 @@ static struct {
     /* Success (Aoishiro) */
     /* 1st key from guessadx */
     {0x4d65,0x5eb7,0x5dfd},
+
+    /* Sonic Team 2 (Sonic and the Black Knight) */
+    /* confirmed unique with guessadx */
+    {0x55b7,0x6191,0x5a77},
+
+    /* Enterbrain (Amagami) */
+    /* one of 32 from guessadx */
+    {0x5a17,0x509f,0x5bfd},
+
+    /* Yamasa (Yamasa Digi Portable: Matsuri no Tatsujin) */
+    /* confirmed unique with guessadx */
+    {0x4c01,0x549d,0x676f},
+
+    /* Kadokawa Shoten (Fragments Blue) */
+    /* confirmed unique with guessadx */
+    {0x5803,0x4555,0x47bf},
+
+    /* Namco (Soulcalibur IV) */
+    /* confirmed unique with guessadx */
+    {0x59ed,0x4679,0x46c9},
+
+    /* G.rev 1 (Senko no Ronde DUO) */
+    /* from guessadx */
+    {0x6157,0x6809,0x4045},
+
+    /* ASCII Media Works 0 (Nogizaka Haruka no Himitsu: Cosplay Hajimemashita) */
+    /* 2nd from guessadx, other was {0x45ad,0x5f27,0x10fd} */
+    {0x45af,0x5f27,0x52b1},
+
+    /* D3 Publisher 0 (Little Anchor) */
+    /* confirmed unique with guessadx */
+    {0x5f65,0x5b3d,0x5f65},
+
+    /* Marvelous 0 (Hanayoi Romanesque: Ai to Kanashimi) */
+    /* 2nd from guessadx, other was {0x5562,0x5047,0x1433} */
+    {0x5563,0x5047,0x43ed},
+
+	/* Capcom (Mobile Suit Gundam: Gundam vs. Gundam NEXT PLUS) */
+    /* confirmed unique with guessadx */
+    {0x4f7b,0x4fdb,0x5cbf},
+
+	/* Developer: Bridge NetShop
+	 * Publisher: Kadokawa Shoten (Shoukan Shoujo: Elemental Girl Calling) */
+    /* confirmed unique with guessadx */
+    {0x4f7b,0x5071,0x4c61},
+
+	/* Developer: Net Corporation
+	 * Publisher: Tecmo (Rakushou! Pachi-Slot Sengen 6: Rio 2 Cruising Vanadis) */
+    /* confirmed unique with guessadx */
+    {0x53e9,0x586d,0x4eaf},
+	
+	/* Developer: Aquaplus
+	 * Tears to Tiara Gaiden Avalon no Kagi (PS3) */
+	/* confirmed unique with guessadx */
+	{0x47e1,0x60e9,0x51c1},
+
+	/* Developer: Broccoli
+	 * Neon Genesis Evangelion: Koutetsu no Girlfriend 2nd (PS2) */
+    /* confirmed unique with guessadx */
+	{0x481d,0x4f25,0x5243},
+
+	/* Developer: Marvelous
+	 * Futakoi Alternative (PS2) */
+    /* confirmed unique with guessadx */
+	{0x413b,0x543b,0x57d1},
+
+	/* Developer: Marvelous
+	 * Gakuen Utopia - Manabi Straight! KiraKira Happy Festa! (PS2)
+	 * Second guess from guessadx, other was 
+	 *   {0x440b,0x4327,0x564b} 
+	 **/
+	 {0x440d,0x4327,0x4fff},
+
+	/* Developer: Datam Polystar
+	 * Soshite Kono Uchuu ni Kirameku Kimi no Shi XXX (PS2) */
+    /* confirmed unique with guessadx */
+	{0x5f5d,0x552b,0x5507},
+
+	/* Developer: Sega
+	 * Sakura Taisen: Atsuki Chishio Ni (PS2) */
+    /* confirmed unique with guessadx */
+	{0x645d,0x6011,0x5c29},
+
+	/* Developer: Sega
+	 * Sakura Taisen 3 ~Paris wa Moeteiru ka~ (PS2) */
+    /* confirmed unique with guessadx */
+	{0x62ad,0x4b13,0x5957},
+
+	/* Developer: Jinx
+	 * Sotsugyou 2nd Generation (PS2)
+     * First guess from guessadx, other was 
+	 *   {0x6307,0x509f,0x2ac5} 
+	 */
+	{0x6305,0x509f,0x4c01},
+
+    /*
+     * La Corda d'Oro (2005)(-)(Koei)[PSP]
+     * confirmed unique with guessadx */
+    {0x55b7,0x67e5,0x5387},
+
+    /*
+     * Nanatsuiro * Drops Pure!! (2007)(Media Works)[PS2]
+     * confirmed unique with guessadx */
+    {0x6731,0x645d,0x566b},
+
+    /*
+     * Shakugan no Shana (2006)(Vridge)(Media Works)[PS2]
+     * confirmed unique with guessadx */
+    {0x5fc5,0x63d9,0x599f},
+
+    /*
+     * Uragiri wa Boku no Namae o Shitteiru (2010)(Kadokawa Shoten)[PS2]
+     * confirmed unique with guessadx */
+    {0x4c73,0x4d8d,0x5827},
+
+	/*
+     * StormLover Kai!! (2012)(D3 Publisher)[PSP]
+     * confirmed unique with guessadx */
+    {0x5a11,0x67e5,0x6751},
+
+	/*
+     * Sora no Otoshimono - DokiDoki Summer Vacation (2010)(Kadokawa Shoten)[PSP]
+     * confirmed unique with guessadx */
+    {0x5e75,0x4a89,0x4c61},
+
+    /*
+     * Boku wa Koukuu Kanseikan - Airport Hero Naha (2006)(Sonic Powered)(Electronic Arts)[PSP]
+     * confirmed unique with guessadx */
+    {0x64ab,0x5297,0x632f},
+
+	/*
+     * Lucky Star - Net Idol Meister (2009)(Kadokawa Shoten)[PSP]
+     * confirmed unique with guessadx */
+    {0x4d82,0x5243,0x685},
+
+    /*
+     * Ishin Renka: Ryouma Gaiden (2010-11-25)(-)(D3 Publisher)[PSP]
+     */
+    {0x54d1,0x526d,0x5e8b},
+
+    /*
+     * Lucky Star - Ryouou Gakuen Outousai Portable (2010-12-22)(-)(Kadokawa Shoten)[PSP]
+     */
+    {0x4d06,0x663b,0x7d09},
+
+    /*
+     * Marriage Royale - Prism Story (2010-04-28)(-)(ASCII Media Works)[PSP]
+     */
+    {0x40a9,0x46b1,0x62ad},
+
+    /*
+     * Nogizaka Haruka no Himitsu - Doujinshi Hajime Mashita (2010-10-28)(-)(ASCII Media Works)[PSP]
+     */
+    {0x4601,0x671f,0x0455},
+
+    /*
+     * Slotter Mania P - Mach Go Go Go III (2011-01-06)(-)(Dorart)[PSP]
+     */
+    {0x41ef,0x463d,0x5507},
+
+    /*
+     * Nichijou - Uchuujin (2011-07-28)(-)(Kadokawa Shoten)[PSP]
+     */
+    {0x4369,0x486d,0x5461},
+
+    /*
+     * R-15 Portable (2011-10-27)(-)(Kadokawa Shoten)[PSP]
+     */
+    {0x6809,0x5fd5,0x5bb1},
+
+    /*
+     * Suzumiya Haruhi-chan no Mahjong (2011-07-07)(-)(Kadokawa Shoten)[PSP]
+     */
+    {0x5c33,0x4133,0x4ce7},
+
 };
 
-static const int key_count = sizeof(keys)/sizeof(keys[0]);
+/* type 9 keys */
+static struct {
+    uint16_t start,mult,add;
+} keys_9[] = {
+    /* Phantasy Star Online 2
+     * guessed with degod */
+    {0x07d2,0x1ec5,0x0c7f},
+};
+
+static const int keys_8_count = sizeof(keys_8)/sizeof(keys_8[0]);
+static const int keys_9_count = sizeof(keys_9)/sizeof(keys_9[0]);
 
 /* return 0 if not found, 1 if found and set parameters */
-static int find_key(STREAMFILE *file, uint16_t *xor_start, uint16_t *xor_mult, uint16_t *xor_add)
+static int find_key(STREAMFILE *file, uint8_t type, uint16_t *xor_start, uint16_t *xor_mult, uint16_t *xor_add)
 {
     uint16_t * scales = NULL;
     uint16_t * prescales = NULL;
@@ -305,37 +508,84 @@ static int find_key(STREAMFILE *file, uint16_t *xor_start, uint16_t *xor_mult, u
             }
         }
 
-        /* guess each of the keys */
-        for (key_id=0;key_id<=key_count;key_id++) {
-            /* test pre-scales */
-            uint16_t xor = keys[key_id].start;
-            uint16_t mult = keys[key_id].mult;
-            uint16_t add = keys[key_id].add;
-            int i;
+        if (type == 8)
+        {
+            /* guess each of the keys */
+            for (key_id=0;key_id<keys_8_count;key_id++) {
+                /* test pre-scales */
+                uint16_t xor = keys_8[key_id].start;
+                uint16_t mult = keys_8[key_id].mult;
+                uint16_t add = keys_8[key_id].add;
+                int i;
 
-            for (i=0;i<bruteframe &&
-                    ((prescales[i]&0x6000)==(xor&0x6000) ||
-                     prescales[i]==0);
-                    i++) {
-                xor = xor * mult + add;
-            }
-
-            if (i == bruteframe)
-            {
-                /* test */
-                for (i=0;i<scales_to_do &&
-                        (scales[i]&0x6000)==(xor&0x6000);i++) {
+                for (i=0;i<bruteframe &&
+                        ((prescales[i]&0x6000)==(xor&0x6000) ||
+                         prescales[i]==0);
+                        i++) {
                     xor = xor * mult + add;
                 }
-                if (i == scales_to_do)
+
+                if (i == bruteframe)
                 {
-                    *xor_start = keys[key_id].start;
-                    *xor_mult = keys[key_id].mult;
-                    *xor_add = keys[key_id].add;
-                    
-                    rc = 1;
-                    goto find_key_cleanup;
+                    /* test */
+                    for (i=0;i<scales_to_do &&
+                            (scales[i]&0x6000)==(xor&0x6000);i++) {
+                        xor = xor * mult + add;
+                    }
+                    if (i == scales_to_do)
+                    {
+                        *xor_start = keys_8[key_id].start;
+                        *xor_mult = keys_8[key_id].mult;
+                        *xor_add = keys_8[key_id].add;
+
+                        rc = 1;
+                        goto find_key_cleanup;
+                    }
                 }
+            }
+        }
+        else if (type == 9)
+        {
+            /* smarter XOR as seen in PSO2, can't do an exact match so we
+             * have to search for the lowest */
+            long best_score = MAX_FRAMES * 0x1fff;
+
+            /* guess each of the keys */
+            for (key_id=0;key_id<keys_9_count;key_id++) {
+                /* run past pre-scales */
+                uint16_t xor = keys_9[key_id].start;
+                uint16_t mult = keys_9[key_id].mult;
+                uint16_t add = keys_9[key_id].add;
+                int i;
+                long total_score = 0;
+
+                for (i=0;i<bruteframe;i++) {
+                    xor = xor * mult + add;
+                }
+
+                if (i == bruteframe)
+                {
+                    /* test */
+                    for (i=0;i<scales_to_do && total_score < best_score;i++) {
+                        xor = xor * mult + add;
+                        total_score += (scales[i]^xor)&0x1fff;
+                    }
+
+                    if (total_score < best_score)
+                    {
+                        *xor_start = keys_9[key_id].start;
+                        *xor_mult = keys_9[key_id].mult;
+                        *xor_add = keys_9[key_id].add;
+
+                        best_score = total_score;
+                    }
+                }
+            }
+
+            /* arbitrarily decide if we have won? */
+            if (best_score < scales_to_do * 0x1000)
+            {
+                rc = 1;
             }
         }
     }
@@ -345,3 +595,4 @@ find_key_cleanup:
     if (prescales) free(prescales);
     return rc;
 }
+

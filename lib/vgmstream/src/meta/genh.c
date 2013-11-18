@@ -1,5 +1,6 @@
 #include "../vgmstream.h"
 #include "meta.h"
+#include "../coding/coding.h"
 #include "../layout/layout.h"
 #include "../util.h"
 #ifdef VGM_USE_MPEG
@@ -26,9 +27,6 @@ VGMSTREAM * init_vgmstream_genh(STREAMFILE *streamFile) {
 
     char filename[260];
     int coding;
-#ifdef VGM_USE_MPEG
-    mpeg_codec_data *data = NULL;
-#endif
 
     /* check extension, case insensitive */
     streamFile->get_name(streamFile,filename,sizeof(filename));
@@ -57,6 +55,9 @@ VGMSTREAM * init_vgmstream_genh(STREAMFILE *streamFile) {
     /* 12 = NGC DSP */
     /* 13 = 8bit unsingned PCM */
     /* 14 = PSX ADPCM (bad flagged) */
+	/* 15 = Microsoft IMA (MS ADPCM)
+	/* 16 = 8-bit PCM (unsigned)
+	/* 17 = Apple Quicktime 4-bit IMA ADPCM;
     /* ... others to come */
     switch (read_32bitLE(0x18,streamFile)) {
         case 0:
@@ -108,6 +109,15 @@ VGMSTREAM * init_vgmstream_genh(STREAMFILE *streamFile) {
         case 14:
             coding = coding_PSX_badflags;
             break;
+        case 15:
+            coding = coding_MS_IMA;
+            break;
+        case 16:
+            coding = coding_PCM8_U;
+            break;
+		case 17:
+			coding = coding_APPLE_IMA4;
+			break;
         default:
             goto fail;
     }
@@ -158,12 +168,14 @@ VGMSTREAM * init_vgmstream_genh(STREAMFILE *streamFile) {
         case coding_PCM16LE:
         case coding_PCM16BE:
         case coding_PCM8:
+        case coding_PCM8_U:
         case coding_SDX2:
         case coding_PSX:
         case coding_PSX_badflags:
         case coding_DVI_IMA:
         case coding_IMA:
         case coding_AICA:
+		case coding_APPLE_IMA4:
             vgmstream->interleave_block_size = interleave;
             if (channel_count > 1)
             {
@@ -183,6 +195,10 @@ VGMSTREAM * init_vgmstream_genh(STREAMFILE *streamFile) {
             } else {
                 vgmstream->layout_type = layout_none;
             }
+            break;
+        case coding_MS_IMA:
+            vgmstream->interleave_block_size = interleave;
+            vgmstream->layout_type = layout_none;
             break;
         case coding_MSADPCM:
             if (channel_count != 2) goto fail;
@@ -237,10 +253,15 @@ VGMSTREAM * init_vgmstream_genh(STREAMFILE *streamFile) {
                 case coding_DVI_IMA:
                 case coding_IMA:
                 case coding_PCM8:
+                case coding_PCM8_U:
                 case coding_PCM8_U_int:
                 case coding_AICA:
                 case coding_INT_DVI_IMA:
                 case coding_INT_IMA:
+				case coding_APPLE_IMA4:
+                    if (coding == coding_AICA) {
+                        vgmstream->ch[i].adpcm_step_index = 0x7f;
+                    }
                     if (vgmstream->layout_type == layout_interleave) {
                         if (interleave >= 512) {
                             chstreamfile =
@@ -260,6 +281,7 @@ VGMSTREAM * init_vgmstream_genh(STREAMFILE *streamFile) {
                     break;
                 case coding_XBOX:
                 case coding_MSADPCM:
+                case coding_MS_IMA:
                     /* xbox's "interleave" is a lie, all channels start at same
                      * offset */
                     chstreamfile =
@@ -309,89 +331,14 @@ VGMSTREAM * init_vgmstream_genh(STREAMFILE *streamFile) {
 
 #ifdef VGM_USE_MPEG
     if (coding == coding_MPEG1_L3) {
-        int rc;
-        off_t read_offset;
-        data = calloc(1,sizeof(mpeg_codec_data));
-        if (!data) goto mpeg_fail;
-
-        data->m = mpg123_new(NULL,&rc);
-        if (rc==MPG123_NOT_INITIALIZED) {
-            if (mpg123_init()!=MPG123_OK) goto mpeg_fail;
-            data->m = mpg123_new(NULL,&rc);
-            if (rc!=MPG123_OK) goto mpeg_fail;
-        } else if (rc!=MPG123_OK) {
-            goto mpeg_fail;
-        }
-
-        mpg123_param(data->m,MPG123_REMOVE_FLAGS,MPG123_GAPLESS,0.0);
-
-        if (mpg123_open_feed(data->m)!=MPG123_OK) {
-            goto mpeg_fail;
-        }
-
-        /* check format */
-        read_offset=0;
-        do {
-            size_t bytes_done;
-            if (read_streamfile(data->buffer, start_offset+read_offset,
-                    MPEG_BUFFER_SIZE,vgmstream->ch[0].streamfile) !=
-                    MPEG_BUFFER_SIZE) goto mpeg_fail;
-            read_offset+=1;
-            rc = mpg123_decode(data->m,data->buffer,MPEG_BUFFER_SIZE,
-                    NULL,0,&bytes_done);
-            if (rc != MPG123_OK && rc != MPG123_NEW_FORMAT &&
-                    rc != MPG123_NEED_MORE) goto mpeg_fail;
-        } while (rc != MPG123_NEW_FORMAT);
-
-        {
-            long rate;
-            int channels,encoding;
-            struct mpg123_frameinfo mi;
-            rc = mpg123_getformat(data->m,&rate,&channels,&encoding);
-            if (rc != MPG123_OK) goto mpeg_fail;
-            if (rate != vgmstream->sample_rate ||
-                    channels != vgmstream->channels ||
-                    encoding != MPG123_ENC_SIGNED_16) goto mpeg_fail;
-            mpg123_info(data->m,&mi);
-            if (mi.rate != vgmstream->sample_rate) goto mpeg_fail;
-            if (mi.version == MPG123_1_0 && mi.layer == 1)
-                vgmstream->coding_type = coding_MPEG1_L1;
-            else if (mi.version == MPG123_1_0 && mi.layer == 2)
-                vgmstream->coding_type = coding_MPEG1_L2;
-            else if (mi.version == MPG123_1_0 && mi.layer == 3)
-                vgmstream->coding_type = coding_MPEG1_L3;
-            else if (mi.version == MPG123_2_0 && mi.layer == 1)
-                vgmstream->coding_type = coding_MPEG2_L1;
-            else if (mi.version == MPG123_2_0 && mi.layer == 2)
-                vgmstream->coding_type = coding_MPEG2_L2;
-            else if (mi.version == MPG123_2_0 && mi.layer == 3)
-                vgmstream->coding_type = coding_MPEG2_L3;
-            else if (mi.version == MPG123_2_5 && mi.layer == 1)
-                vgmstream->coding_type = coding_MPEG25_L1;
-            else if (mi.version == MPG123_2_5 && mi.layer == 2)
-                vgmstream->coding_type = coding_MPEG25_L2;
-            else if (mi.version == MPG123_2_5 && mi.layer == 3)
-                vgmstream->coding_type = coding_MPEG25_L3;
-            else goto mpeg_fail;
-        }
-
-        /* reinit, to ignore the reading we've done so far */
-        mpg123_open_feed(data->m);
-
-        vgmstream->codec_data = data;
+        vgmstream->codec_data = init_mpeg_codec_data(vgmstream->ch[0].streamfile, start_offset, vgmstream->sample_rate, vgmstream->channels, &(vgmstream->coding_type), NULL, NULL);
+        if (!vgmstream->codec_data) goto fail;
     }
 #endif
 
     return vgmstream;
 
     /* clean up anything we may have opened */
-#ifdef VGM_USE_MPEG
-mpeg_fail:
-    if (data) {
-        mpg123_delete(data->m);
-        free(data);
-    }
-#endif
 fail:
     if (vgmstream) close_vgmstream(vgmstream);
     return NULL;

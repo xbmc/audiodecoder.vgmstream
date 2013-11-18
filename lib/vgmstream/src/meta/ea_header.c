@@ -82,6 +82,14 @@ void Parse_Header(STREAMFILE* streamFile,EA_STRUCT* ea, off_t offset, int length
 			case 0xFC:
 			case 0xFD:
 				break;
+#if 0
+            // was added for My Sims Kingdom, apparently this is not the right
+            // way to do it (see NFS Most Wanted and Underground 2)
+            case 0x06: //
+                if (readPatch(streamFile, &offset) == 0x65)
+                    ea->compression_type = EA_PCM_BE;
+                break;
+#endif
 			case 0x80: // compression version
 				ea->compression_version = (uint8_t)readPatch(streamFile, &offset);
 				break;
@@ -140,7 +148,9 @@ VGMSTREAM * init_vgmstream_ea(STREAMFILE *streamFile) {
 
     /* check extension, case insensitive */
     streamFile->get_name(streamFile,filename,sizeof(filename));
-    if (strcasecmp("sng",filename_extension(filename)) && 
+    if (strcasecmp("strm",filename_extension(filename)) &&
+        strcasecmp("xa",filename_extension(filename)) &&
+        strcasecmp("sng",filename_extension(filename)) && 
 		strcasecmp("asf",filename_extension(filename)) && 
 		strcasecmp("str",filename_extension(filename)) && 
 		strcasecmp("xsf",filename_extension(filename)) && 
@@ -229,6 +239,11 @@ VGMSTREAM * init_vgmstream_ea(STREAMFILE *streamFile) {
 		case EA_PCM_LE:
 		 	vgmstream->meta_type=meta_EA_PCM;
 			vgmstream->coding_type=coding_PCM16LE_int;
+			vgmstream->layout_type=layout_ea_blocked;
+			break;
+		case EA_PCM_BE:
+		 	vgmstream->meta_type=meta_EA_PCM;
+			vgmstream->coding_type=coding_PCM16BE;
 			vgmstream->layout_type=layout_ea_blocked;
 			break;
 		case EA_ADPCM:
