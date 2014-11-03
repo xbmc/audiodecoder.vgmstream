@@ -55,7 +55,6 @@ set(SOURCES src/coding/acm_decoder.c
             src/layout/xa_blocked.c
             src/layout/xvas_block.c
             src/meta/2dx9.c
-            src/meta/2dx.c
             src/meta/aax.c
             src/meta/acm.c
             src/meta/ads.c
@@ -68,6 +67,9 @@ set(SOURCES src/coding/acm_decoder.c
             src/meta/apple_caff.c
             src/meta/ast.c
             src/meta/baf.c
+            src/meta/bcstm.c
+            src/meta/bfstm.c
+            src/meta/bfwav.c
             src/meta/bgw.c
             src/meta/bnsf.c
             src/meta/brstm.c
@@ -89,6 +91,8 @@ set(SOURCES src/coding/acm_decoder.c
             src/meta/excitebots.c
             src/meta/ffw.c
             src/meta/fsb.c
+            src/meta/fsb5.c
+            src/meta/g1l.c
             src/meta/gca.c
             src/meta/gcsw.c
             src/meta/genh.c
@@ -140,6 +144,7 @@ set(SOURCES src/coding/acm_decoder.c
             src/meta/nub.c
             src/meta/nwa.c
             src/meta/ogg_vorbis_file.c
+            src/meta/otm.c
             src/meta/p3d.c
             src/meta/pc_adp.c
             src/meta/pcm.c

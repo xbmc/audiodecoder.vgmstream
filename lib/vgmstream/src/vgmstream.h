@@ -10,8 +10,8 @@
  * If someone wants to do a standalone build, they can do it by simply
  * removing these defines (and the references to the libraries in the
  * Makefile) */
-//#define VGM_USE_VORBIS
-//#define VGM_USE_MPEG
+#define VGM_USE_VORBIS
+#define VGM_USE_MPEG
 /* disabled by default, defined for builds that support it */
 //#define VGM_USE_G7221
 
@@ -189,6 +189,7 @@ typedef enum {
 typedef enum {
     /* DSP-specific */
     meta_DSP_STD,           /* standard GC ADPCM (DSP) header */
+    meta_DSP_CSMP,          /* Metroid Prime 3, Donkey Kong Country Returns */
     meta_DSP_CSTR,          /* Star Fox Assault "Cstr" */
     meta_DSP_RS03,          /* Metroid Prime 2 "RS03" */
     meta_DSP_STM,           /* Paper Mario 2 STM */
@@ -210,18 +211,20 @@ typedef enum {
 
     /* Nintendo */
     meta_STRM,              /* STRM */
+	meta_FSTM,              /* FSTM */
     meta_RSTM,              /* RSTM (similar to STRM) */
     meta_AFC,               /* AFC */
     meta_AST,               /* AST */
     meta_RWSD,              /* single-stream RWSD */
     meta_RWAR,              /* single-stream RWAR */
     meta_RWAV,              /* contents of RWAR */
-    meta_CWAV,              /* */
+    meta_CWAV,              /* contents of CWAR */
+    meta_FWAV,              /* contents of FWAR */
     meta_RSTM_SPM,          /* RSTM with 44->22khz hack */
     meta_THP,
     meta_RSTM_shrunken,     /* Atlus' mutant shortened RSTM */
-	meta_NDS_SWAV,		    /* Asphalt Urban GT 1 & 2 */
-	meta_NDS_RRDS,		    /* Ridge Racer DS */
+    meta_NDS_SWAV,          /* Asphalt Urban GT 1 & 2 */
+    meta_NDS_RRDS,          /* Ridge Racer DS */
     meta_WII_BNS,           /* Wii BNS Banner Sound (similar to RSTM) */
     meta_STX,               /* Pikmin .stx */
 
@@ -279,6 +282,7 @@ typedef enum {
     meta_FSB4,              /* FMOD Sample Bank, version 4 */
     meta_FSB_MPEG,          /* Just Test */
 	  meta_FSB4_WAV,          /* FMOD Sample Bank, version 4 with "WAV" Header */
+    meta_FSB5,              /* FMOD Sample Bank, version 5 */
     meta_RWX,				/* Air Force Delta Storm (XBOX) */
     meta_XWB,				/* King of Fighters (XBOX) */
     meta_XA30,				/* Driver - Parallel Lines (PS2) */
@@ -455,7 +459,6 @@ typedef enum {
 	  meta_NGC_LPS,			      /* Rave Master (Groove Adventure Rave)(GC) */
     meta_NAOMI_ADPCM,		    /* NAOMI/NAOMI2 ARcade games */
 	  meta_SD9,               /* beatmaniaIIDX16 - EMPRESS (Arcade) */
-	  meta_2DX,               /* beatmaniaIIDX16 - EMPRESS (Arcade) */
 	  meta_2DX9,               /* beatmaniaIIDX16 - EMPRESS (Arcade) */
     meta_PS2_VGV,           /* Rune: Viking Warlord */
     meta_NGC_GCUB,          /* Sega Soccer Slam */
@@ -540,6 +543,10 @@ typedef enum {
 	meta_PS3_IVAG,			// Interleaved VAG files (PS3)
    meta_PS2_2PFS,			// Mahoromatic: Moetto - KiraKira Maid-San (PS2)
    meta_PS2_VBK,			// Disney's Stitch - Experiment 626
+   meta_OTM,                 // Otomedius (Arcade)
+   meta_CSTM,               // Nintendo 3DS CSTM
+   meta_3DS_IDSP,           // Nintendo 3DS IDSP
+   meta_G1L,                // Tecmo Koei Wii U G1L Files (DSP)
 } meta_t;
 
 typedef struct {
