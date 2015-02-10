@@ -18,3 +18,5 @@ set(VGM_SOURCES src/VGMCodec.cpp)
 set(DEPLIBS vgmstream)
 
 build_addon(audiodecoder.vgmstream VGM DEPLIBS)
+
+include(CPack)
