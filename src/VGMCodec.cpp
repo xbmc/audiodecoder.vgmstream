@@ -185,11 +185,23 @@ static struct _STREAMFILE* open_XBMC(struct _STREAMFILE* streamfile, const char*
   return streamfile;
 }
 
+#define SET_IF(ptr, value) \
+{ \
+  if ((ptr)) \
+   *(ptr) = (value); \
+}
+
 void* Init(const char* strFile, unsigned int filecache, int* channels,
            int* samplerate, int* bitspersample, int64_t* totaltime,
            int* bitrate, AEDataFormat* format, const AEChannel** channelinfo)
 {
+  if (!strFile)
+    return NULL;
+
   VGMContext* result = new VGMContext;
+  if (!result)
+    return NULL;
+
   open_XBMC((struct _STREAMFILE*)result, strFile, 0);
 
   result->stream = init_vgmstream_from_STREAMFILE((struct _STREAMFILE*)result);
@@ -199,20 +211,34 @@ void* Init(const char* strFile, unsigned int filecache, int* channels,
     return NULL;
   }
 
-  *channels = result->stream->channels;
-  *samplerate = result->stream->sample_rate;
-  *bitspersample = 16;
-  *totaltime = result->stream->num_samples/result->stream->sample_rate*1000;
-  *format = AE_FMT_S16NE;
-  *channelinfo = NULL;
-  *bitrate = 0;
+  SET_IF(channels, result->stream->channels)
+  SET_IF(samplerate, result->stream->sample_rate)
+  SET_IF(bitspersample, 16)
+  SET_IF(totaltime, result->stream->num_samples/result->stream->sample_rate*1000)
+  SET_IF(format, AE_FMT_S16NE)
+  static enum AEChannel map[8][9] = {
+    {AE_CH_FC, AE_CH_NULL},
+    {AE_CH_FL, AE_CH_FR, AE_CH_NULL},
+    {AE_CH_FL, AE_CH_FC, AE_CH_FR, AE_CH_NULL},
+    {AE_CH_FL, AE_CH_FR, AE_CH_BL, AE_CH_BR, AE_CH_NULL},
+    {AE_CH_FL, AE_CH_FC, AE_CH_FR, AE_CH_BL, AE_CH_BR, AE_CH_NULL},
+    {AE_CH_FL, AE_CH_FC, AE_CH_FR, AE_CH_BL, AE_CH_BR, AE_CH_LFE, AE_CH_NULL},
+    {AE_CH_FL, AE_CH_FC, AE_CH_FR, AE_CH_SL, AE_CH_SR, AE_CH_BL, AE_CH_BR, AE_CH_NULL},
+    {AE_CH_FL, AE_CH_FC, AE_CH_FR, AE_CH_SL, AE_CH_SR, AE_CH_BL, AE_CH_BR, AE_CH_LFE, AE_CH_NULL}
+  };
+
+  SET_IF(channelinfo, NULL)
+  if (result->stream->channels <= 8)
+    SET_IF(channelinfo, map[result->stream->channels-1])
+
+  SET_IF(bitrate, 0)
 
   return result;
 }
 
 int ReadPCM(void* context, uint8_t* pBuffer, int size, int *actualsize)
 {
-  if (!context)
+  if (!context || !actualsize)
     return 1;
 
   VGMContext* ctx = (VGMContext*)context;
@@ -231,6 +257,9 @@ int64_t Seek(void* context, int64_t time)
 
   VGMContext* ctx = (VGMContext*)context;
   int16_t* buffer = new int16_t[576*ctx->stream->channels];
+  if (!buffer)
+    return 0;
+
   long samples_to_do = (long)time * ctx->stream->sample_rate / 1000L;
   if (samples_to_do < ctx->stream->current_sample )
      reset_vgmstream(ctx->stream);
@@ -250,6 +279,9 @@ int64_t Seek(void* context, int64_t time)
 
 bool DeInit(void* context)
 {
+  if (!context)
+    return true;
+
   VGMContext* ctx = (VGMContext*)context;
 
   close_vgmstream(ctx->stream);
