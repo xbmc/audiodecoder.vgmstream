@@ -10,8 +10,8 @@
  * If someone wants to do a standalone build, they can do it by simply
  * removing these defines (and the references to the libraries in the
  * Makefile) */
-#define VGM_USE_VORBIS
-#define VGM_USE_MPEG
+//#define VGM_USE_VORBIS
+//#define VGM_USE_MPEG
 /* disabled by default, defined for builds that support it */
 //#define VGM_USE_G7221
 
