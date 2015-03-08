@@ -1,0 +1,21 @@
+Source: kodi-audiodecoder-vgmstream
+Priority: extra
+Maintainer: Arne Morten Kvarving <cptspiff@gmail.com>
+Build-Depends: debhelper (>= 8.0.0), cmake, kodi-audiodecoder-dev,
+               kodi-addon-dev, libkodiplatform-dev
+Standards-Version: 3.9.2
+Section: libs
+
+Package: kodi-audiodecoder-vgmstream
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: VGMStream audio decoder for Kodi
+  VGMStream audio decoder for Kodi
+
+Package: kodi-audiodecoder-vgmstream-dbg
+Section: debug
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: debug symbols for VGMStream audio decoder for Kodi
+  debug symbols for VGMStream audio decoder for Kodi
