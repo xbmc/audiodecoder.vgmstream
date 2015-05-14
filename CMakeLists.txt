@@ -8,8 +8,10 @@ enable_language(CXX)
 
 find_package(kodi REQUIRED)
 find_package(kodiplatform REQUIRED)
+find_package(platform REQUIRED)
 
 include_directories(${kodiplatform_INCLUDE_DIRS}
+                    ${platform_INCLUDE_DIRS}
                     ${KODI_INCLUDE_DIR}
                     ${PROJECT_SOURCE_DIR}/lib/vgmstream)
 
@@ -17,7 +19,7 @@ add_subdirectory(lib/vgmstream)
 
 set(VGM_SOURCES src/VGMCodec.cpp)
 
-set(DEPLIBS ${kodiplatform_LIBRARIES} vgmstream)
+set(DEPLIBS ${platform_LIBRARIES} vgmstream)
 
 build_addon(audiodecoder.vgmstream VGM DEPLIBS)
 
