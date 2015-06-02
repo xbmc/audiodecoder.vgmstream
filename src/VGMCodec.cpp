@@ -18,15 +18,15 @@
  *
  */
 
-#include "kodi/libXBMC_addon.h"
+#include "libXBMC_addon.h"
 
 ADDON::CHelper_libXBMC_addon *XBMC           = NULL;
 
 extern "C" {
 
 #include "src/vgmstream.h"
-#include "kodi/kodi_audiodec_dll.h"
-#include "kodi/AEChannelData.h"
+#include "kodi_audiodec_dll.h"
+#include "AEChannelData.h"
 
 //-- Create -------------------------------------------------------------------
 // Called on load. Addon should fully initalize or return error status
