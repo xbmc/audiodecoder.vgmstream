@@ -140,7 +140,7 @@ static void close_XBMC(struct _STREAMFILE* streamfile)
   VGMContext *ctx = (VGMContext*) streamfile;
   if (ctx && ctx->file && XBMC)
     XBMC->CloseFile(ctx->file);
-  delete ctx;
+  ctx->file = nullptr;
 }
 
 static size_t get_size_XBMC(struct _STREAMFILE* streamfile)
