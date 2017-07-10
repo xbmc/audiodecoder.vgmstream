@@ -26,6 +26,7 @@ extern "C" {
 
 #include "src/vgmstream.h"
 #include "kodi_audiodec_dll.h"
+#include "IFileTypes.h"
 #include "AEChannelData.h"
 
 //-- Create -------------------------------------------------------------------
@@ -104,7 +105,7 @@ static size_t get_size_XBMC(struct _STREAMFILE* streamfile)
 {
   VGMContext *ctx = (VGMContext*) streamfile;
   if (ctx && ctx->file && XBMC)
-    return XBMC->GetFilePosition(ctx->file);
+    return XBMC->GetFileLength(ctx->file);
 
   return 0;
 }
@@ -129,7 +130,7 @@ static struct _STREAMFILE* open_XBMC(struct _STREAMFILE* streamfile, const char*
 {
   VGMContext *ctx = (VGMContext*) streamfile;
   ctx->pos = 0;
-  ctx->file = XBMC->OpenFile(filename, 0);
+  ctx->file = XBMC->OpenFile(filename, XFILE::READ_CACHED);
   ctx->sf.read = read_XBMC;
   ctx->sf.get_size = get_size_XBMC;
   ctx->sf.get_offset = get_offset_XBMC;
