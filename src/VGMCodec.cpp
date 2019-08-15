@@ -98,8 +98,7 @@ static struct _STREAMFILE* open_VFS(struct _STREAMFILE* streamfile, const char* 
 
 }
 
-class CVGMCodec : public kodi::addon::CInstanceAudioDecoder,
-                  public kodi::addon::CAddonBase
+class ATTRIBUTE_HIDDEN CVGMCodec : public kodi::addon::CInstanceAudioDecoder
 {
 public:
   CVGMCodec(KODI_HANDLE instance) :
