@@ -296,8 +296,5 @@ set(SOURCES src/coding/acm_decoder.c
             src/streamfile.c
             src/util.c)
  
-if(NOT WIN32)
-  add_options(ALL_LANGUAGES ALL_BUILDS "-fPIC")
-endif()
-
 add_library(vgmstream STATIC ${SOURCES})
+set_property(TARGET vgmstream PROPERTY POSITION_INDEPENDENT_CODE ON)
