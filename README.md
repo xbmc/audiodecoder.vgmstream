@@ -1,14 +1,14 @@
 # audiodecoder.vgmstream addon for Kodi
 
-This is a [Kodi](http://kodi.tv) audio decoder addon for video game music streams.
+This is a [Kodi](https://kodi.tv) audio decoder addon for video game music streams.
 
-[![Build Status](https://travis-ci.org/xbmc/audiodecoder.vgmstream.svg?branch=master)](https://travis-ci.org/xbmc/audiodecoder.vgmstream)
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/xbmc/audiodecoder.vgmstream?svg=true)](https://ci.appveyor.com/project/xbmc/audiodecoder-vgmstream)
+[![Build Status](https://travis-ci.org/xbmc/audiodecoder.vgmstream.svg?branch=Matrix)](https://travis-ci.org/xbmc/audiodecoder.vgmstream/branches)
+[![Build Status](https://ci.appveyor.com/api/projects/status/github/xbmc/audiodecoder.vgmstream?branch=Matrix&svg=true)](https://ci.appveyor.com/project/xbmc/audiodecoder-vgmstream?branch=Matrix)
 
 ## Build instructions
 
 When building the addon you have to use the correct branch depending on which version of Kodi you're building against. 
-For example, if you're building the `master` branch of Kodi you should checkout the `master` branch of this repository. 
+If you want to build the addon to be compatible with the latest kodi `master` commit, you need to checkout the branch with the current kodi codename.
 Also make sure you follow this README from the branch in question.
 
 ### Linux
