@@ -12,7 +12,7 @@
     library_@PLATFORM@="@LIBRARY_FILENAME@"/>
   <extension point="xbmc.addon.metadata">
     <summary lang="en">VGM Audio Decoder</summary>
-    <description lang="en">Video Game Music Audio Decoder</description>
+    <description lang="en">Video Game Music (VGM) Audio Decoder is a library for playing a wide variety of audio formats used in video games.</description>
     <platform>@PLATFORM@</platform>
   </extension>
 </addon>
