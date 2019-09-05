@@ -183,6 +183,21 @@ public:
     return time;
   }
 
+  bool ReadTag(const std::string& file, std::string& title, std::string& artist, int& length) override
+  {
+    open_VFS((struct _STREAMFILE*)&ctx, file.c_str(), 0);
+
+    ctx.stream = init_vgmstream_from_STREAMFILE((struct _STREAMFILE*)&ctx);
+    if (!ctx.stream)
+    {
+      close_VFS((struct _STREAMFILE*)&ctx);
+      return false;
+    }
+
+    length = ctx.stream->num_samples/ctx.stream->sample_rate;
+    return true;
+  }
+
 private:
   VGMContext ctx;
 };
