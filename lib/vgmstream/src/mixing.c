@@ -1,6 +1,9 @@
 #include "vgmstream.h"
 #include "mixing.h"
 #include "plugins.h"
+#ifdef WIN32
+#define _USE_MATH_DEFINES
+#endif
 #include <math.h>
 #include <limits.h>
 

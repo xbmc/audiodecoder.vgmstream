@@ -10,7 +10,7 @@ if(MINGW)
 	message(FATAL_ERROR "Cannot currently build with MinGW")
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(vgmstream)
 
 # Options
@@ -58,15 +58,15 @@ if(WIN32)
 	if(MSVC)
 		file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/version.h" VERSION_H_PATH)
 		add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/version.h
-			COMMAND "${CMAKE_SOURCE_DIR}/version.bat"
+			COMMAND "${PROJECT_SOURCE_DIR}/version.bat"
 			ARGS ${VERSION_H_PATH} VERSION
-			DEPENDS ${CMAKE_SOURCE_DIR}/version.bat)
+			DEPENDS ${PROJECT_SOURCE_DIR}/version.bat)
 		add_custom_target(version_h DEPENDS ${CMAKE_BINARY_DIR}/version.h)
 	else()
 		find_package(Git)
 		if(GIT_FOUND)
 			execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --tags
-				WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+				WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 				OUTPUT_VARIABLE VGMSTREAM_VERSION
 				OUTPUT_STRIP_TRAILING_WHITESPACE)
 		endif()
@@ -76,7 +76,7 @@ else()
 	find_package(Git)
 	if(GIT_FOUND)
 		execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --tags
-			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+			WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 			OUTPUT_VARIABLE VGMSTREAM_VERSION
 			OUTPUT_STRIP_TRAILING_WHITESPACE)
 	endif()
