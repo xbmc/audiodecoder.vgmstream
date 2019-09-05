@@ -6,16 +6,30 @@
 #ifndef _STREAMTYPES_H
 #define _STREAMTYPES_H
 
-#include <stdint.h>
 #ifdef _MSC_VER
-//#include <pstdint.h>
+
+#if (_MSC_VER >= 1600)
+#include <stdint.h>
+#else
+#include <pstdint.h>
+#endif /* (_MSC_VER >= 1600) */
+
+#ifndef inline /* (_MSC_VER < 1900)? */
 #define inline _inline
-#define strcasecmp _stricmp
-#if _MSC_VER < 1900
-#define snprintf _snprintf
-#endif
 #endif
 
-typedef int16_t sample;
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+
+#if (_MSC_VER < 1900)
+#define snprintf _snprintf
+#endif /* (_MSC_VER < 1900) */
+
+#else
+#include <stdint.h>
+#endif /* _MSC_VER */
+
+typedef int16_t sample; //TODO: deprecated, remove
+typedef int16_t sample_t;
 
 #endif

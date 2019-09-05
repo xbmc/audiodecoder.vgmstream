@@ -1,300 +1,265 @@
-set(SOURCES src/coding/acm_decoder.c
-            src/coding/adx_decoder.c
-            src/coding/aica_decoder.c
-            src/coding/eaxa_decoder.c
-            src/coding/g721_decoder.c
-            src/coding/g7221_decoder.c
-            src/coding/ima_decoder.c
-            src/coding/l5_555_decoder.c
-            src/coding/lsf_decoder.c
-            src/coding/mpeg_decoder.c
-            src/coding/msadpcm_decoder.c
-            src/coding/mtaf_decoder.c
-            src/coding/nds_procyon_decoder.c
-            src/coding/ngc_afc_decoder.c
-            src/coding/ngc_dsp_decoder.c
-            src/coding/ngc_dtk_decoder.c
-            src/coding/nwa_decoder.c
-            src/coding/ogg_vorbis_decoder.c
-            src/coding/pcm_decoder.c
-            src/coding/psx_decoder.c
-            src/coding/SASSC_decoder.c
-            src/coding/sdx2_decoder.c
-            src/coding/ws_decoder.c
-            src/coding/xa_decoder.c
-            src/layout/aax_layout.c
-            src/layout/aix_layout.c
-            src/layout/ast_blocked.c
-            src/layout/bdsp_blocked.c
-            src/layout/blocked.c
-            src/layout/caf_blocked.c
-            src/layout/de2_blocked.c
-            src/layout/ea_block.c
-            src/layout/emff_blocked.c
-            src/layout/filp_blocked.c
-            src/layout/gsb_blocked.c
-            src/layout/halpst_blocked.c
-            src/layout/ims_block.c
-            src/layout/interleave_byte.c
-            src/layout/interleave.c
-            src/layout/ivaud_layout.c
-            src/layout/mus_acm_layout.c
-            src/layout/mxch_blocked.c
-            src/layout/nolayout.c
-            src/layout/ps2_adm_blocked.c
-            src/layout/ps2_iab_blocked.c
-            src/layout/ps2_strlr_blocked.c
-            src/layout/psx_mgav_blocked.c
-            src/layout/scd_int_layout.c
-            src/layout/str_snds_blocked.c
-            src/layout/thp_blocked.c
-            src/layout/tra_blocked.c
-            src/layout/vs_blocked.c
-            src/layout/ws_aud_blocked.c
-            src/layout/wsi_blocked.c
-            src/layout/xa_blocked.c
-            src/layout/xvas_block.c
-            src/meta/2dx9.c
-            src/meta/aax.c
-            src/meta/acm.c
-            src/meta/ads.c
-            src/meta/adx_header.c
-            src/meta/afc_header.c
-            src/meta/agsc.c
-            src/meta/ahx.c
-            src/meta/aifc.c
-            src/meta/aix.c
-            src/meta/apple_caff.c
-            src/meta/ast.c
-            src/meta/baf.c
-            src/meta/bcstm.c
-            src/meta/bfstm.c
-            src/meta/bfwav.c
-            src/meta/bgw.c
-            src/meta/bnsf.c
-            src/meta/brstm.c
-            src/meta/capdsp.c
-            src/meta/Cstr.c
-            src/meta/dc_asd.c
-            src/meta/dc_dcsw_dcs.c
-            src/meta/dc_idvi.c
-            src/meta/dc_kcey.c
-            src/meta/dc_str.c
-            src/meta/de2.c
-            src/meta/dmsg_segh.c
-            src/meta/dsp_bdsp.c
-            src/meta/dsp_sth_str.c
-            src/meta/ea_header.c
-            src/meta/ea_old.c
-            src/meta/emff.c
-            src/meta/exakt_sc.c
-            src/meta/excitebots.c
-            src/meta/ffw.c
-            src/meta/fsb.c
-            src/meta/fsb5.c
-            src/meta/g1l.c
-            src/meta/gca.c
-            src/meta/gcsw.c
-            src/meta/genh.c
-            src/meta/gh3_bar.c
-            src/meta/gsp_gsb.c
-            src/meta/halpst.c
-            src/meta/his.c
-            src/meta/idsp.c
-            src/meta/ios_psnd.c
-            src/meta/ish_isd.c
-            src/meta/ivaud.c
-            src/meta/ivb.c
-            src/meta/kraw.c
-            src/meta/lsf.c
-            src/meta/mattel_hyperscan.c
-            src/meta/maxis_xa.c
-            src/meta/mn_str.c
-            src/meta/msvp.c
-            src/meta/mus_acm.c
-            src/meta/musc.c
-            src/meta/musx.c
-            src/meta/myspd.c
-            src/meta/naomi_adpcm.c
-            src/meta/naomi_spsd.c
-            src/meta/nds_hwas.c
-            src/meta/nds_rrds.c
-            src/meta/nds_sad.c
-            src/meta/nds_strm.c
-            src/meta/nds_swav.c
-            src/meta/ngca.c
-            src/meta/ngc_adpdtk.c
-            src/meta/ngc_bh2pcm.c
-            src/meta/ngc_bo2.c
-            src/meta/ngc_caf.c
-            src/meta/ngc_dsp_konami.c
-            src/meta/ngc_dsp_mpds.c
-            src/meta/ngc_dsp_std.c
-            src/meta/ngc_dsp_ygo.c
-            src/meta/ngc_ffcc_str.c
-            src/meta/ngc_gcub.c
-            src/meta/ngc_lps.c
-            src/meta/ngc_nst_dsp.c
-            src/meta/ngc_pdt.c
-            src/meta/ngc_sck_dsp.c
-            src/meta/ngc_ssm.c
-            src/meta/ngc_tydsp.c
-            src/meta/ngc_waa_wac_wad_wam.c
-            src/meta/ngc_ymf.c
-            src/meta/nub.c
-            src/meta/nwa.c
-            src/meta/ogg_vorbis_file.c
-            src/meta/otm.c
-            src/meta/p3d.c
-            src/meta/pc_adp.c
-            src/meta/pcm.c
-            src/meta/pc_mxst.c
-            src/meta/pc_smp.c
-            src/meta/pc_snds.c
-            src/meta/pc_sob.c
-            src/meta/pona.c
-            src/meta/pos.c
-            src/meta/ps2_2pfs.c
-            src/meta/ps2_adm.c
-            src/meta/ps2_ads.c
-            src/meta/ps2_adsc.c
-            src/meta/ps2_ass.c
-            src/meta/ps2_ast.c
-            src/meta/ps2_aus.c
-            src/meta/ps2_b1s.c
-            src/meta/ps2_bg00.c
-            src/meta/ps2_bmdx.c
-            src/meta/ps2_ccc.c
-            src/meta/ps2_dxh.c
-            src/meta/ps2_enth.c
-            src/meta/ps2_exst.c
-            src/meta/ps2_filp.c
-            src/meta/ps2_gbts.c
-            src/meta/ps2_gcm.c
-            src/meta/ps2_hgc1.c
-            src/meta/ps2_hsf.c
-            src/meta/ps2_iab.c
-            src/meta/ps2_ikm.c
-            src/meta/ps2_ild.c
-            src/meta/ps2_int.c
-            src/meta/ps2_joe.c
-            src/meta/ps2_jstm.c
-            src/meta/ps2_kces.c
-            src/meta/ps2_khv.c
-            src/meta/ps2_leg.c
-            src/meta/ps2_lpcm.c
-            src/meta/ps2_mcg.c
-            src/meta/ps2_mib.c
-            src/meta/ps2_mic.c
-            src/meta/ps2_mihb.c
-            src/meta/ps2_msa.c
-            src/meta/ps2_mss.c
-            src/meta/ps2_mtaf.c
-            src/meta/ps2_npsf.c
-            src/meta/ps2_p2bt.c
-            src/meta/ps2_pnb.c
-            src/meta/ps2_psh.c
-            src/meta/ps2_psw.c
-            src/meta/ps2_rnd.c
-            src/meta/ps2_rstm.c
-            src/meta/ps2_rws.c
-            src/meta/ps2_rxw.c
-            src/meta/ps2_sfs.c
-            src/meta/ps2_sl3.c
-            src/meta/ps2_smpl.c
-            src/meta/ps2_snd.c
-            src/meta/ps2_spm.c
-            src/meta/ps2_sps.c
-            src/meta/ps2_ster.c
-            src/meta/ps2_stm.c
-            src/meta/ps2_str.c
-            src/meta/ps2_strlr.c
-            src/meta/ps2_svag.c
-            src/meta/ps2_tec.c
-            src/meta/ps2_tk5.c
-            src/meta/ps2_vag.c
-            src/meta/ps2_vas.c
-            src/meta/ps2_vbk.c
-            src/meta/ps2_vgs.c
-            src/meta/ps2_vgv.c
-            src/meta/ps2_vms.c
-            src/meta/ps2_voi.c
-            src/meta/ps2_vpk.c
-            src/meta/ps2_wad.c
-            src/meta/ps2_wb.c
-            src/meta/ps2_wmus.c
-            src/meta/ps2_xa2.c
-            src/meta/ps2_xa30.c
-            src/meta/ps2_xau.c
-            src/meta/ps3_cps.c
-            src/meta/ps3_ivag.c
-            src/meta/ps3_klbs.c
-            src/meta/ps3_msf.c
-            src/meta/ps3_past.c
-            src/meta/ps3_sgh_sgb.c
-            src/meta/ps3_vawx.c
-            src/meta/ps3_xvag.c
-            src/meta/psx_cdxa.c
-            src/meta/psx_fag.c
-            src/meta/psx_gms.c
-            src/meta/psx_str_mgav.c
-            src/meta/raw.c
-            src/meta/redspark.c
-            src/meta/riff.c
-            src/meta/rkv.c
-            src/meta/rs03.c
-            src/meta/rsd.c
-            src/meta/rsf.c
-            src/meta/rwsd.c
-            src/meta/rwx.c
-            src/meta/s14_sss.c
-            src/meta/sat_baka.c
-            src/meta/sat_dvi.c
-            src/meta/sat_sap.c
-            src/meta/sd9.c
-            src/meta/sdt.c
-            src/meta/seg.c
-            src/meta/sfl.c
-            src/meta/sli.c
-            src/meta/spt_spd.c
-            src/meta/sqex_scd.c
-            src/meta/ss_stream.c
-            src/meta/str_asr.c
-            src/meta/str_snds.c
-            src/meta/stx.c
-            src/meta/svs.c
-            src/meta/thp.c
-            src/meta/tun.c
-            src/meta/ubi_ckd.c
-            src/meta/vgs.c
-            src/meta/vs.c
-            src/meta/vsf.c
-            src/meta/wii_bns.c
-            src/meta/wii_mus.c
-            src/meta/wii_ras.c
-            src/meta/wii_smp.c
-            src/meta/wii_sng.c
-            src/meta/wii_str.c
-            src/meta/wii_sts.c
-            src/meta/wpd.c
-            src/meta/ws_aud.c
-            src/meta/wvs.c
-            src/meta/x360_tra.c
-            src/meta/xbox_hlwav.c
-            src/meta/xbox_ims.c
-            src/meta/xbox_stma.c
-            src/meta/xbox_wavm.c
-            src/meta/xbox_xmu.c
-            src/meta/xbox_xvas.c
-            src/meta/xbox_xwav.c
-            src/meta/xss.c
-            src/meta/xwb.c
-            src/meta/ydsp.c
-            src/meta/zsd.c
-            src/meta/zwdsp.c
-            src/vgmstream.c
-            src/streamfile.c
-            src/util.c)
- 
-add_library(vgmstream STATIC ${SOURCES})
-set_property(TARGET vgmstream PROPERTY POSITION_INDEPENDENT_CODE ON)
+cmake_minimum_required(VERSION 3.5)
+project(vgmstream C)
+enable_language(CXX)
+
+# TODO: Figure out how to build audacious plugin via CMake
+# TODO: Figure out how to build XMPlay plugin via CMake
+# TODO: Figure out why MinGW-w64 doesn't build
+
+if(MINGW)
+	message(FATAL_ERROR "Cannot currently build with MinGW")
+endif()
+
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+include(vgmstream)
+
+# Options
+option(USE_FDKAAC "Use FDK-AAC/QAAC for support of MP4 AAC" ON)
+set(QAAC_PATH CACHE PATH "Path to QAAC")
+set(FDK_AAC_PATH CACHE PATH "Path to FDK-AAC")
+option(USE_MPEG "Use libmpg123 for support of MPEG (MP1/MP2/MP3)" ON)
+option(USE_VORBIS "Use libvorbis for support of Vorbis" ON)
+option(USE_FFMPEG "Use FFmpeg for support of many codecs" ON)
+option(USE_MAIATRAC3PLUS "Use MAIATRAC3+ for support of ATRAC3+" OFF)
+set(MAIATRAC3PLUS_PATH CACHE PATH "Path to MAIATRAC3+")
+if(WIN32)
+	# May need to see if it is possible to get these to work on non-Windows systems too
+	option(USE_G7221 "Use libg7221_decode for support of ITU-T G.722.1 annex C" ON)
+	option(USE_G719 "Use libg719_decode for support ITU-T G.719" ON)
+	option(USE_ATRAC9 "Use LibAtrac9 for support of ATRAC9" ON)
+	option(USE_CELT "Use libcelt for support of FSB CELT versions 0.6.1 and 0.11.0" ON)
+endif()
+
+# Build choices
+option(BUILD_CLI "Build vgmstream CLI" ON)
+if(WIN32)
+	option(BUILD_FB2K "Build foobar2000 component" ON)
+	set(FB2K_SDK_PATH CACHE PATH "Path to foobar2000 SDK")
+	set(WTL_INCLUDE_PATH CACHE PATH "Path to WTL include directory")
+	set(FB2K_COMPONENT_INSTALL_PREFIX CACHE PATH "Path to foobar2000 component installation directory")
+	option(BUILD_WINAMP "Build Winamp plugin" ON)
+	set(WINAMP_INSTALL_PREFIX CACHE PATH "Path to Winamp installation directory")
+	option(BUILD_XMPLAY "Build XMPlay plugin" ON)
+	set(XMPLAY_INSTALL_PREFIX CACHE PATH "Path to XMPlay installation directory")
+else()
+	option(BUILD_AUDACIOUS "Build Audacious plugin" ON)
+endif()
+
+if(WIN32)
+	# Enable support for the resource compiler when using MinGW
+	if(MINGW)
+		enable_language(RC)
+		# Not 100% sure this is needed, but in the past, MinGW's command for compiling resources was incorrect
+		set(CMAKE_RC_COMPILE_OBJECT "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
+	endif(MINGW)
+
+	# Update the version
+	set(CMAKE_EXECUTABLE_SUFFIX .exe)
+	if(MSVC)
+		file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/version.h" VERSION_H_PATH)
+		add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/version.h
+			COMMAND "${CMAKE_SOURCE_DIR}/version.bat"
+			ARGS ${VERSION_H_PATH} VERSION
+			DEPENDS ${CMAKE_SOURCE_DIR}/version.bat)
+		add_custom_target(version_h DEPENDS ${CMAKE_BINARY_DIR}/version.h)
+	else()
+		find_package(Git)
+		if(GIT_FOUND)
+			execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --tags
+				WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+				OUTPUT_VARIABLE VGMSTREAM_VERSION
+				OUTPUT_STRIP_TRAILING_WHITESPACE)
+		endif()
+	endif()
+else()
+	# Update the version
+	find_package(Git)
+	if(GIT_FOUND)
+		execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --tags
+			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+			OUTPUT_VARIABLE VGMSTREAM_VERSION
+			OUTPUT_STRIP_TRAILING_WHITESPACE)
+	endif()
+
+	# Find the relevant packages
+	if(USE_MPEG)
+		find_package(MPG123)
+		if(NOT MPG123_FOUND)
+			set(USE_MPEG OFF)
+		endif()
+	endif()
+	if(USE_VORBIS)
+		find_package(VorbisFile)
+		if(NOT VORBISFILE_FOUND)
+			set(USE_VORBIS OFF)
+		endif()
+	endif()
+	if(USE_FFMPEG)
+		find_package(FFmpeg)
+		if(NOT FFMPEG_LIBRARIES)
+			set(USE_FFMPEG OFF)
+		endif()
+	endif()
+
+	# If building the CLI, we need to include AO as well
+	if(BUILD_CLI)
+		find_package(AO)
+		if(NOT AO_FOUND)
+			message(FATAL_ERROR "Cannot build vgmstream123 without libao")
+		endif()
+	endif()
+
+	# If building Audacious, we need to make sure we can find its pkg-config module as well as GTK's
+	if(BUILD_AUDACIOUS)
+		include(FindPkgConfig)
+		pkg_search_module(AUDACIOUS REQUIRED audacious>=3.6)
+		pkg_get_variable(AUDACIOUS_PLUGIN_DIR audacious plugin_dir)
+		pkg_search_module(GTK REQUIRED gtk+-3.0 gtk+-2.0)
+	endif()
+endif()
+
+# Set compiler flags
+if(CMAKE_CXX_COMPILER_ID MATCHES Clang OR CMAKE_CXX_COMPILER_ID MATCHES GNU)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+	if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-parentheses-equality -Wno-header-guard -Wno-unused-function -Wno-shift-negative-value -Wno-deprecated-register")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-parentheses-equality -Wno-header-guard -Wno-unused-function -Wno-shift-negative-value -Wno-deprecated-register")
+	elseif()
+		if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.9)
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-misleading-indentation")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-misleading-indentation")
+		endif()
+		if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.0)
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-attributes")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-attributes")
+		endif()
+		if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 2.99)
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")
+		endif()
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-format -Wno-sign-compare")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format -Wno-sign-compare")
+	endif()
+elseif(MSVC)
+	if(CMAKE_C_FLAGS MATCHES "/W[0-4]")
+		string(REGEX REPLACE "/W[0-4]" "/W3" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+	else()
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3")
+	endif()
+	if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
+		string(REGEX REPLACE "/W[0-4]" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
+	endif()
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4005 /wd4018 /wd4244 /wd4302 /wd4838")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4005 /wd4018 /wd4244 /wd4302 /wd4838")
+endif()
+
+# Add other projects and subdirectories as needed
+if(USE_FDKAAC)
+	if(FDK_AAC_PATH)
+		include(fdk-aac)
+	else()
+		message(FATAL_ERROR "Path to FDK-AAC must be set. (Use FDK_AAC_PATH)")
+	endif()
+	if(QAAC_PATH)
+		include(mp4v2)
+	else()
+		message(FATAL_ERROR "Path to QAAC must be set. (Use QAAC_PATH)")
+	endif()
+endif()
+if(USE_MAIATRAC3PLUS)
+	if(MAIATRAC3PLUS_PATH)
+		add_subdirectory(${MAIATRAC3PLUS_PATH}/MaiAT3PlusDecoder ${CMAKE_BINARY_DIR}/maitrac3plus)
+	else()
+		message(FATAL_ERROR "Path to MAIATRAC3+ must be set. (Use MAIATRAC3PLUS_PATH)")
+	endif()
+endif()
+add_subdirectory(src)
+if(WIN32)
+	add_subdirectory(ext_libs)
+	if(BUILD_WINAMP)
+		if(NOT WINAMP_INSTALL_PREFIX)
+			set(WINAMP_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/winamp)
+		endif()
+		add_subdirectory(winamp)
+	endif()
+	if(BUILD_FB2K)
+		if(NOT FB2K_SDK_PATH)
+			message(FATAL_ERROR "The path to the foobar2000 SDK must be set. (Use FB2K_SDK_PATH)")
+		endif()
+		if(NOT WTL_INCLUDE_PATH)
+			message(FATAL_ERROR "The path to the WTL include directory must be set. (Use WTL_INCLUDE_PATH)")
+		endif()
+		if(NOT FB2K_COMPONENT_INSTALL_PREFIX)
+			set(FB2K_COMPONENT_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/fb2k)
+		endif()
+		include_external_msproject(fb2k_sdk ${FB2K_SDK_PATH}/foobar2000/SDK/foobar2000_SDK.vcxproj)
+		include_external_msproject(fb2k_sdk_helpers ${FB2K_SDK_PATH}/foobar2000/helpers/foobar2000_sdk_helpers.vcxproj)
+		include_external_msproject(fb2k_atl_helpers ${FB2K_SDK_PATH}/foobar2000/ATLHelpers/foobar2000_ATL_helpers.vcxproj)
+		include_external_msproject(fb2k_component_client ${FB2K_SDK_PATH}/foobar2000/foobar2000_component_client/foobar2000_component_client.vcxproj)
+		include_external_msproject(pfc ${FB2K_SDK_PATH}/pfc/pfc.vcxproj)
+		add_subdirectory(fb2k)
+	endif()
+	if(BUILD_XMPLAY)
+		if(NOT XMPLAY_INSTALL_PREFIX)
+			set(XMPLAY_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/xmplay)
+		endif()
+		add_subdirectory(xmplay)
+	endif()
+else()
+	if(BUILD_AUDACIOUS)
+		add_subdirectory(audacious)
+	endif()
+endif()
+if(BUILD_CLI)
+	if(WIN32)
+		add_subdirectory(ext_libs/Getopt)
+	endif()
+	add_subdirectory(cli)
+endif()
+
+# Option Summary
+message(STATUS " Option Summary")
+message(STATUS "=================")
+message(STATUS "FKD-AAC/QAAC: ${USE_FDKAAC}")
+message(STATUS "        MPEG: ${USE_MPEG}")
+message(STATUS "      Vorbis: ${USE_VORBIS}")
+message(STATUS "      FFmpeg: ${USE_FFMPEG}")
+message(STATUS "  MAIATRAC3+: ${USE_MAIATRAC3PLUS}")
+if(WIN32)
+	message(STATUS "     G.722.1: ${USE_G7221}")
+	message(STATUS "       G.719: ${USE_G719}")
+	message(STATUS "      ATRAC9: ${USE_ATRAC9}")
+	message(STATUS "    FSB CELT: ${USE_CELT}")
+endif()
+message(STATUS "")
+
+# Build Summary
+message(STATUS "        Building")
+message(STATUS "=========================")
+if(WIN32)
+	message(STATUS "                 CLI: ${BUILD_CLI}")
+	message(STATUS "foobar2000 component: ${BUILD_FB2K}")
+	message(STATUS "       Winamp plugin: ${BUILD_WINAMP}")
+	message(STATUS "       XMPlay plugin: ${BUILD_XMPLAY}")
+else()
+	message(STATUS "CLI/vgmstream123: ${BUILD_CLI}")
+	message(STATUS "Audacious plugin: ${BUILD_AUDACIOUS}")
+endif()
+message(STATUS "")
+
+# Install Summary
+message(STATUS "      Install Paths")
+message(STATUS "=========================")
+if(WIN32)
+	message(STATUS "                 CLI: ${CMAKE_INSTALL_PREFIX}/bin")
+	message(STATUS "foobar2000 component: ${FB2K_COMPONENT_INSTALL_PREFIX}")
+	message(STATUS "       Winamp plugin: ${WINAMP_INSTALL_PREFIX}")
+	message(STATUS "       XMPlay plugin: ${XMPLAY_INSTALL_PREFIX}")
+else()
+	message(STATUS "CLI/vgmstream123: ${CMAKE_INSTALL_PREFIX}/bin")
+	message(STATUS "Audacious plugin: ${AUDACIOUS_PLUGIN_DIR}/Input")
+endif()
+message(STATUS "")

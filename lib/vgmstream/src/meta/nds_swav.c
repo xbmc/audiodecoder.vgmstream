@@ -5,7 +5,7 @@
     SWAV - found in Asphalt Urban GT & Asphalt Urban GT 2 */
 VGMSTREAM * init_vgmstream_nds_swav(STREAMFILE *streamFile) {
     VGMSTREAM * vgmstream = NULL;
-    char filename[260];
+    char filename[PATH_LIMIT];
     int codec_number;
     int channel_count;
     int loop_flag;
@@ -49,7 +49,7 @@ VGMSTREAM * init_vgmstream_nds_swav(STREAMFILE *streamFile) {
             bits_per_sample = 16;
             break;
         case 2:
-            coding_type = coding_INT_IMA;
+            coding_type = coding_IMA_int;
             bits_per_sample = 4;
             break;
         default:
@@ -74,7 +74,7 @@ VGMSTREAM * init_vgmstream_nds_swav(STREAMFILE *streamFile) {
             vgmstream->loop_start_sample;
 	}
 
-    if (coding_type == coding_INT_IMA) {
+    if (coding_type == coding_IMA_int) {
         /* handle IMA frame header */
         vgmstream->loop_start_sample -= 32 / bits_per_sample;
         vgmstream->loop_end_sample -= 32 / bits_per_sample;

@@ -88,7 +88,6 @@ static struct _STREAMFILE* open_VFS(struct _STREAMFILE* streamfile, const char* 
   ctx->sf.get_size = get_size_VFS;
   ctx->sf.get_offset = get_offset_VFS;
   ctx->sf.get_name = get_name_VFS;
-  ctx->sf.get_realname = get_name_VFS;
   ctx->sf.open = open_VFS;
   ctx->sf.close = close_VFS;
   strcpy(ctx->name, filename);
