@@ -20,6 +20,7 @@
 
 #include <kodi/addon-instance/AudioDecoder.h>
 #include <kodi/Filesystem.h>
+#include <kodi/General.h>
 
 extern "C" {
 #include "src/vgmstream.h"
@@ -109,6 +110,10 @@ public:
       close_vgmstream(ctx.stream);
 
     delete ctx.file;
+
+    // Set the static to false only from one where has set it before
+    if (m_loopForEverInUse)
+      m_loopForEverActive = false;
   }
 
   bool Init(const std::string& filename, unsigned int filecache,
@@ -147,12 +152,35 @@ public:
       channellist = map[ctx.stream->channels-1];
 
     bitrate = 0;
+    m_loopForEver = kodi::GetSettingBoolean("loopforever");
+    if (!m_loopForEverActive && m_loopForEver && ctx.stream->loop_flag)
+    {
+      m_loopForEverActive = true; // Set static to know on others that becomes active
+      m_loopForEverInUse = true; // Set to class it's own, to know on desctruction that created from here
+      kodi::QueueNotification(QUEUE_INFO, "", kodi::GetLocalizedString(30002));
+    }
+
+    m_endReached = false;
 
     return true;
   }
 
   int ReadPCM(uint8_t* buffer, int size, int& actualsize) override
   {
+    if (m_endReached)
+      return -1;
+
+    bool loopForever = m_loopForEver && ctx.stream->loop_flag;
+    if (!loopForever)
+    {
+      int decodePosSamples = size / (2 * ctx.stream->channels);
+      if (decodePosSamples + ctx.stream->current_sample > ctx.stream->num_samples)
+      {
+        size = (decodePosSamples - ctx.stream->num_samples) * (ctx.stream->channels / 2);
+        m_endReached = true;
+      }
+    }
+
     render_vgmstream((sample*)buffer, size/(2*ctx.stream->channels), ctx.stream);
     actualsize = size;
 
@@ -200,7 +228,16 @@ public:
 
 private:
   VGMContext ctx;
+  bool m_loopForEver = false;
+  bool m_endReached = false;
+  bool m_loopForEverInUse = false;
+
+  // Static because Kodi opens the next file before the end of this and
+  // otherwise notification comes twice at the same playback.
+  static bool m_loopForEverActive;
 };
+
+bool CVGMCodec::m_loopForEverActive = false;
 
 
 class ATTRIBUTE_HIDDEN CMyAddon : public kodi::addon::CAddonBase
