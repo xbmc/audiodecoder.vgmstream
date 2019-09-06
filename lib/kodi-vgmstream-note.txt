@@ -1,0 +1,6 @@
+vgmstream source from https://github.com/losnoco/vgmstream
+Sync to r1050-2466-ga349c26b
+
+For Kodi CMAKE_SOURCE_DIR changed to PROJECT_SOURCE_DIR on
+"./vgmstream/CMakeLists.txt" and "./vgmstream/src/CMakeLists.txt".
+Add _USE_MATH_DEFINES to "./vgmstream/src/mixing.c".

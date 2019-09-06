@@ -20,6 +20,7 @@
 
 #include <kodi/addon-instance/AudioDecoder.h>
 #include <kodi/Filesystem.h>
+#include <kodi/General.h>
 
 extern "C" {
 #include "src/vgmstream.h"
@@ -88,7 +89,6 @@ static struct _STREAMFILE* open_VFS(struct _STREAMFILE* streamfile, const char* 
   ctx->sf.get_size = get_size_VFS;
   ctx->sf.get_offset = get_offset_VFS;
   ctx->sf.get_name = get_name_VFS;
-  ctx->sf.get_realname = get_name_VFS;
   ctx->sf.open = open_VFS;
   ctx->sf.close = close_VFS;
   strcpy(ctx->name, filename);
@@ -110,6 +110,10 @@ public:
       close_vgmstream(ctx.stream);
 
     delete ctx.file;
+
+    // Set the static to false only from one where has set it before
+    if (m_loopForEverInUse)
+      m_loopForEverActive = false;
   }
 
   bool Init(const std::string& filename, unsigned int filecache,
@@ -148,12 +152,35 @@ public:
       channellist = map[ctx.stream->channels-1];
 
     bitrate = 0;
+    m_loopForEver = kodi::GetSettingBoolean("loopforever");
+    if (!m_loopForEverActive && m_loopForEver && ctx.stream->loop_flag)
+    {
+      m_loopForEverActive = true; // Set static to know on others that becomes active
+      m_loopForEverInUse = true; // Set to class it's own, to know on desctruction that created from here
+      kodi::QueueNotification(QUEUE_INFO, "", kodi::GetLocalizedString(30002));
+    }
+
+    m_endReached = false;
 
     return true;
   }
 
   int ReadPCM(uint8_t* buffer, int size, int& actualsize) override
   {
+    if (m_endReached)
+      return -1;
+
+    bool loopForever = m_loopForEver && ctx.stream->loop_flag;
+    if (!loopForever)
+    {
+      int decodePosSamples = size / (2 * ctx.stream->channels);
+      if (decodePosSamples + ctx.stream->current_sample > ctx.stream->num_samples)
+      {
+        size = (decodePosSamples - ctx.stream->num_samples) * (ctx.stream->channels / 2);
+        m_endReached = true;
+      }
+    }
+
     render_vgmstream((sample*)buffer, size/(2*ctx.stream->channels), ctx.stream);
     actualsize = size;
 
@@ -184,9 +211,33 @@ public:
     return time;
   }
 
+  bool ReadTag(const std::string& file, std::string& title, std::string& artist, int& length) override
+  {
+    open_VFS((struct _STREAMFILE*)&ctx, file.c_str(), 0);
+
+    ctx.stream = init_vgmstream_from_STREAMFILE((struct _STREAMFILE*)&ctx);
+    if (!ctx.stream)
+    {
+      close_VFS((struct _STREAMFILE*)&ctx);
+      return false;
+    }
+
+    length = ctx.stream->num_samples/ctx.stream->sample_rate;
+    return true;
+  }
+
 private:
   VGMContext ctx;
+  bool m_loopForEver = false;
+  bool m_endReached = false;
+  bool m_loopForEverInUse = false;
+
+  // Static because Kodi opens the next file before the end of this and
+  // otherwise notification comes twice at the same playback.
+  static bool m_loopForEverActive;
 };
+
+bool CVGMCodec::m_loopForEverActive = false;
 
 
 class ATTRIBUTE_HIDDEN CMyAddon : public kodi::addon::CAddonBase

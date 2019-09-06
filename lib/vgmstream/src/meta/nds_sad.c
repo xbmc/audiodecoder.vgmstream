@@ -4,7 +4,7 @@
 /* sadl (only the Professor Layton interleaved IMA version) */
 VGMSTREAM * init_vgmstream_sadl(STREAMFILE *streamFile) {
     VGMSTREAM * vgmstream = NULL;
-    char filename[260];
+    char filename[PATH_LIMIT];
     off_t start_offset;
 
     int loop_flag;
@@ -27,7 +27,7 @@ VGMSTREAM * init_vgmstream_sadl(STREAMFILE *streamFile) {
     switch (read_8bit(0x33,streamFile)&0xf0)
     {
         case 0x70:
-            coding_type = coding_INT_IMA;
+            coding_type = coding_IMA_int;
             break;
         case 0xb0:
             coding_type = coding_NDS_PROCYON;
@@ -61,7 +61,7 @@ VGMSTREAM * init_vgmstream_sadl(STREAMFILE *streamFile) {
 
     vgmstream->coding_type = coding_type;
 
-    if (coding_type == coding_INT_IMA)
+    if (coding_type == coding_IMA_int)
         vgmstream->num_samples = 
             (read_32bitLE(0x40,streamFile)-start_offset)/channel_count*2;
     else if (coding_type == coding_NDS_PROCYON)
@@ -72,7 +72,7 @@ VGMSTREAM * init_vgmstream_sadl(STREAMFILE *streamFile) {
 
     if (loop_flag)
     {
-        if (coding_type == coding_INT_IMA)
+        if (coding_type == coding_IMA_int)
             vgmstream->loop_start_sample = (read_32bitLE(0x54,streamFile)-start_offset)/channel_count*2;
         else
             vgmstream->loop_start_sample = (read_32bitLE(0x54,streamFile)-start_offset)/channel_count/16*30;

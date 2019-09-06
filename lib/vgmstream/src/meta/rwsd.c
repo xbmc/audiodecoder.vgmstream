@@ -46,7 +46,11 @@ static void read_rwav(struct rwav_data * rd)
 
         /* little endian, version 2 */
         if ((uint32_t)read_32bitBE(rd->offset+4,rd->streamFile)!=0xFFFE4000 ||
-            (uint32_t)read_32bitBE(rd->offset+8,rd->streamFile)!=0x00000102)
+            (
+             (uint32_t)read_32bitBE(rd->offset+8,rd->streamFile)!=0x00000102 &&
+             (uint32_t)read_32bitBE(rd->offset+8,rd->streamFile)!=0x00010102
+            )
+           )
             return;
 
         chunk_table_offset = rd->offset+0x18;
@@ -89,7 +93,7 @@ static void read_rwar(struct rwav_data * rd)
  * single stream form here */
 VGMSTREAM * init_vgmstream_rwsd(STREAMFILE *streamFile) {
     VGMSTREAM * vgmstream = NULL;
-    char filename[260];
+    char filename[PATH_LIMIT];
 
     coding_t coding_type;
 
@@ -241,7 +245,7 @@ VGMSTREAM * init_vgmstream_rwsd(STREAMFILE *streamFile) {
             coding_type = coding_NGC_DSP;
             break;
         case 3:
-            coding_type = coding_IMA;
+            coding_type = coding_3DS_IMA;
             break;
         default:
             goto fail;
@@ -276,10 +280,13 @@ VGMSTREAM * init_vgmstream_rwsd(STREAMFILE *streamFile) {
         vgmstream->meta_type = meta_RWAR;
     else if (rwav)
     {
-        if (big_endian)
+        if (big_endian) {
             vgmstream->meta_type = meta_RWAV;
-        else
+        }
+        else {
             vgmstream->meta_type = meta_CWAV;
+            vgmstream->allow_dual_stereo = 1; /* LEGO 3DS games */
+        }
     }
     else
         vgmstream->meta_type = meta_RWSD;
@@ -339,7 +346,7 @@ VGMSTREAM * init_vgmstream_rwsd(STREAMFILE *streamFile) {
                 }
             }
 
-            if (vgmstream->coding_type == coding_IMA) {
+            if (vgmstream->coding_type == coding_3DS_IMA) {
                 vgmstream->ch[j].adpcm_history1_16 = read_16bit(codec_info_offset,streamFile);
                 vgmstream->ch[j].adpcm_step_index = read_16bit(codec_info_offset+2,streamFile);
             }
@@ -361,8 +368,7 @@ VGMSTREAM * init_vgmstream_rwsd(STREAMFILE *streamFile) {
     {
         int i;
         for (i=0;i<channel_count;i++) {
-            vgmstream->ch[i].streamfile = streamFile->open(streamFile,filename,
-                    0x1000);
+            vgmstream->ch[i].streamfile = streamFile->open(streamFile,filename,STREAMFILE_DEFAULT_BUFFER_SIZE);
 
             if (!vgmstream->ch[i].streamfile) goto fail;
 
