@@ -14,5 +14,10 @@
     <summary lang="en">VGM Audio Decoder</summary>
     <description lang="en">Video Game Music (VGM) Audio Decoder is a library for playing a wide variety of audio formats used in video games.</description>
     <platform>@PLATFORM@</platform>
+    <license>GPL-2.0</license>
+    <source>https://github.com/xbmc/audiodecoder.vgmstream</source>
+    <assets>
+      <icon>icon.png</icon>
+    </assets>
   </extension>
 </addon>
