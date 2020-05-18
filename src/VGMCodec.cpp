@@ -1,21 +1,8 @@
 /*
- *      Copyright (C) 2005-2020 Team Kodi
- *      http://kodi.tv
+ *  Copyright (C) 2005-2020 Team Kodi (https://kodi.tv)
  *
- *  This Program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2, or (at your option)
- *  any later version.
- *
- *  This Program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with Kodi; see the file COPYING.  If not, see
- *  <http://www.gnu.org/licenses/>.
- *
+ *  SPDX-License-Identifier: GPL-2.0-or-later
+ *  See LICENSE.md for more information.
  */
 
 #include <kodi/addon-instance/AudioDecoder.h>
@@ -84,7 +71,7 @@ static struct _STREAMFILE* open_VFS(struct _STREAMFILE* streamfile, const char* 
   VGMContext *ctx = (VGMContext*) streamfile;
   ctx->pos = 0;
   ctx->file = new kodi::vfs::CFile;
-  ctx->file->OpenFile(filename, READ_CACHED);
+  ctx->file->OpenFile(filename, ADDON_READ_CACHED);
   ctx->sf.read = read_VFS;
   ctx->sf.get_size = get_size_VFS;
   ctx->sf.get_offset = get_offset_VFS;
@@ -101,8 +88,8 @@ static struct _STREAMFILE* open_VFS(struct _STREAMFILE* streamfile, const char* 
 class ATTRIBUTE_HIDDEN CVGMCodec : public kodi::addon::CInstanceAudioDecoder
 {
 public:
-  CVGMCodec(KODI_HANDLE instance) :
-    CInstanceAudioDecoder(instance) {}
+  CVGMCodec(KODI_HANDLE instance, const std::string& version) :
+    CInstanceAudioDecoder(instance, version) {}
 
   ~CVGMCodec() override
   {
@@ -244,9 +231,9 @@ class ATTRIBUTE_HIDDEN CMyAddon : public kodi::addon::CAddonBase
 {
 public:
   CMyAddon() { }
-  ADDON_STATUS CreateInstance(int instanceType, std::string instanceID, KODI_HANDLE instance, KODI_HANDLE& addonInstance) override
+  ADDON_STATUS CreateInstance(int instanceType, const std::string& instanceID, KODI_HANDLE instance, const std::string& version, KODI_HANDLE& addonInstance) override
   {
-    addonInstance = new CVGMCodec(instance);
+    addonInstance = new CVGMCodec(instance, version);
     return ADDON_STATUS_OK;
   }
   ~CMyAddon() override = default;
