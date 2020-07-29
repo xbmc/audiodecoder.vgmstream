@@ -27,6 +27,7 @@ set(BUILD_AUDACIOUS OFF CACHE BOOL "Build Audacious plugin" FORCE)
 add_subdirectory(lib/vgmstream)
 
 set(VGM_SOURCES src/VGMCodec.cpp)
+set(VGM_HEADERS src/VGMCodec.h)
 
 set(DEPLIBS libvgmstream)
 
