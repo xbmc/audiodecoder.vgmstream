@@ -12,7 +12,7 @@
 extern "C" {
 #include "src/vgmstream.h"
 
-struct VGMContext
+struct ATTRIBUTE_HIDDEN VGMContext
 {
   STREAMFILE sf;
   kodi::vfs::CFile* file = nullptr;
@@ -106,8 +106,8 @@ public:
   bool Init(const std::string& filename, unsigned int filecache,
             int& channels, int& samplerate,
             int& bitspersample, int64_t& totaltime,
-            int& bitrate, AEDataFormat& format,
-            std::vector<AEChannel>& channellist) override
+            int& bitrate, AudioEngineDataFormat& format,
+            std::vector<AudioEngineChannel>& channellist) override
   {
     open_VFS((struct _STREAMFILE*)&ctx, filename.c_str(), 0);
 
@@ -122,18 +122,20 @@ public:
     samplerate = ctx.stream->sample_rate;
     bitspersample =  16;
     totaltime =  ctx.stream->num_samples/ctx.stream->sample_rate*1000;
-    format = AE_FMT_S16NE;
+    format = AUDIOENGINE_FMT_S16NE;
 
-    static std::vector<std::vector<enum AEChannel>> map = {
-      {AE_CH_FC},
-      {AE_CH_FL, AE_CH_FR},
-      {AE_CH_FL, AE_CH_FC, AE_CH_FR},
-      {AE_CH_FL, AE_CH_FR, AE_CH_BL, AE_CH_BR},
-      {AE_CH_FL, AE_CH_FC, AE_CH_FR, AE_CH_BL, AE_CH_BR},
-      {AE_CH_FL, AE_CH_FC, AE_CH_FR, AE_CH_BL, AE_CH_BR, AE_CH_LFE},
-      {AE_CH_FL, AE_CH_FC, AE_CH_FR, AE_CH_SL, AE_CH_SR, AE_CH_BL, AE_CH_BR},
-      {AE_CH_FL, AE_CH_FC, AE_CH_FR, AE_CH_SL, AE_CH_SR, AE_CH_BL, AE_CH_BR, AE_CH_LFE}
+    // clang-format off
+    static std::vector<std::vector<enum AudioEngineChannel>> map = {
+      {AUDIOENGINE_CH_FC},
+      {AUDIOENGINE_CH_FL, AUDIOENGINE_CH_FR},
+      {AUDIOENGINE_CH_FL, AUDIOENGINE_CH_FC, AUDIOENGINE_CH_FR},
+      {AUDIOENGINE_CH_FL, AUDIOENGINE_CH_FR, AUDIOENGINE_CH_BL, AUDIOENGINE_CH_BR},
+      {AUDIOENGINE_CH_FL, AUDIOENGINE_CH_FC, AUDIOENGINE_CH_FR, AUDIOENGINE_CH_BL, AUDIOENGINE_CH_BR},
+      {AUDIOENGINE_CH_FL, AUDIOENGINE_CH_FC, AUDIOENGINE_CH_FR, AUDIOENGINE_CH_BL, AUDIOENGINE_CH_BR, AUDIOENGINE_CH_LFE},
+      {AUDIOENGINE_CH_FL, AUDIOENGINE_CH_FC, AUDIOENGINE_CH_FR, AUDIOENGINE_CH_SL, AUDIOENGINE_CH_SR, AUDIOENGINE_CH_BL, AUDIOENGINE_CH_BR},
+      {AUDIOENGINE_CH_FL, AUDIOENGINE_CH_FC, AUDIOENGINE_CH_FR, AUDIOENGINE_CH_SL, AUDIOENGINE_CH_SR, AUDIOENGINE_CH_BL, AUDIOENGINE_CH_BR, AUDIOENGINE_CH_LFE}
       };
+    // clang-format on
 
     if (ctx.stream->channels <= 8)
       channellist = map[ctx.stream->channels-1];
@@ -198,9 +200,9 @@ public:
     return time;
   }
 
-  bool ReadTag(const std::string& file, std::string& title, std::string& artist, int& length) override
+  bool ReadTag(const std::string& filename, kodi::addon::AudioDecoderInfoTag& tag) override
   {
-    open_VFS((struct _STREAMFILE*)&ctx, file.c_str(), 0);
+    open_VFS((struct _STREAMFILE*)&ctx, filename.c_str(), 0);
 
     ctx.stream = init_vgmstream_from_STREAMFILE((struct _STREAMFILE*)&ctx);
     if (!ctx.stream)
@@ -209,7 +211,9 @@ public:
       return false;
     }
 
-    length = ctx.stream->num_samples/ctx.stream->sample_rate;
+    tag.SetDuration(ctx.stream->num_samples/ctx.stream->sample_rate);
+    tag.SetSamplerate(ctx.stream->sample_rate);
+    tag.SetChannels(ctx.stream->channels);
     return true;
   }
 
