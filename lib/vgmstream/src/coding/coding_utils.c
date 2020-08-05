@@ -19,7 +19,7 @@
  * read num_bits (up to 25) from a bit offset.
  * 25 since we read a 32 bit int, and need to adjust up to 7 bits from the byte-rounded fseek (32-7=25)
  */
-static uint32_t read_bitsBE_b(off_t bit_offset, int num_bits, STREAMFILE *streamFile) {
+static uint32_t read_bitsBE_b(int64_t bit_offset, int num_bits, STREAMFILE *streamFile) {
     uint32_t num, mask;
     if (num_bits > 25) return -1; //???
 
@@ -154,6 +154,9 @@ int ffmpeg_make_riff_xma1(uint8_t * buf, size_t buf_size, size_t sample_count, s
         put_8bit   (buf+off+0x11, stream_channels);
         put_16bitLE(buf+off+0x12, speakers);
     }
+
+    /* xmaencode decoding rejects XMA1 without "seek" chunk, though it doesn't seem to use it
+     * (needs to be have entries but can be bogus, also generates seek for even small sounds) */
 
     memcpy(buf+riff_size-4-4, "data", 4);
     put_32bitLE(buf+riff_size-4, data_size); /* data size */
@@ -400,7 +403,7 @@ fail:
 /* XMA PARSING                                  */
 /* ******************************************** */
 
-static void ms_audio_parse_header(STREAMFILE *streamFile, int xma_version, off_t offset_b, int bits_frame_size, size_t *first_frame_b, size_t *packet_skip_count, size_t *header_size_b) {
+static void ms_audio_parse_header(STREAMFILE *streamFile, int xma_version, int64_t offset_b, int bits_frame_size, size_t *first_frame_b, size_t *packet_skip_count, size_t *header_size_b) {
     if (xma_version == 1) { /* XMA1 */
         //packet_sequence  = read_bitsBE_b(offset_b+0,  4,  streamFile); /* numbered from 0 to N */
         //unknown          = read_bitsBE_b(offset_b+4,  2,  streamFile); /* packet_metadata? (always 2) */
@@ -431,11 +434,11 @@ static void ms_audio_parse_header(STREAMFILE *streamFile, int xma_version, off_t
     /* full packet skip, no new frames start in this packet (prev frames can end here)
      * standardized to some value */
     if (*packet_skip_count == 0x7FF) { /* XMA1, 11b */
-        VGM_LOG("MS_SAMPLES: XMA1 full packet_skip at 0x%x\n", (uint32_t)offset_b/8);
+        VGM_LOG("MS_SAMPLES: XMA1 full packet_skip\n");// at %"PRIx64"\n", offset_b/8);
         *packet_skip_count = 0x800;
     }
     else if (*packet_skip_count == 0xFF) { /* XMA2, 8b*/
-        VGM_LOG("MS_SAMPLES: XMA2 full packet_skip at 0x%x\n", (uint32_t)offset_b/8);
+        VGM_LOG("MS_SAMPLES: XMA2 full packet_skip\n");// at %"PRIx64"\n", offset_b/8);
         *packet_skip_count = 0x800;
     }
 
@@ -458,7 +461,7 @@ static void ms_audio_get_samples(ms_sample_data * msd, STREAMFILE *streamFile, i
     int frames = 0, samples = 0, loop_start_frame = 0, loop_end_frame = 0;
 
     size_t first_frame_b, packet_skip_count, header_size_b, frame_size_b;
-    off_t offset_b, packet_offset_b, frame_offset_b;
+    int64_t offset_b, packet_offset_b, frame_offset_b;
 
     size_t packet_size = bytes_per_packet;
     size_t packet_size_b = packet_size * 8;
@@ -535,11 +538,11 @@ static void ms_audio_get_skips(STREAMFILE *streamFile, int xma_version, off_t da
     int start_skip = 0, end_skip = 0;
 
     size_t first_frame_b, packet_skip_count, header_size_b, frame_size_b;
-    off_t offset_b, packet_offset_b, frame_offset_b;
+    int64_t offset_b, packet_offset_b, frame_offset_b;
 
     size_t packet_size = bytes_per_packet;
     size_t packet_size_b = packet_size * 8;
-    off_t offset = data_offset;
+    int64_t offset = data_offset;
 
     /* read packet */
     {
@@ -1159,26 +1162,13 @@ int w_bits(vgm_bitstream * ob, int num_bits, uint32_t value) {
 /* CUSTOM STREAMFILES                           */
 /* ******************************************** */
 
-STREAMFILE* setup_subfile_streamfile(STREAMFILE *streamFile, off_t subfile_offset, size_t subfile_size, const char* extension) {
-    STREAMFILE *temp_streamFile = NULL, *new_streamFile = NULL;
+STREAMFILE* setup_subfile_streamfile(STREAMFILE *sf, off_t subfile_offset, size_t subfile_size, const char* extension) {
+    STREAMFILE *new_sf = NULL;
 
-    new_streamFile = open_wrap_streamfile(streamFile);
-    if (!new_streamFile) goto fail;
-    temp_streamFile = new_streamFile;
-
-    new_streamFile = open_clamp_streamfile(temp_streamFile, subfile_offset,subfile_size);
-    if (!new_streamFile) goto fail;
-    temp_streamFile = new_streamFile;
-
+    new_sf = open_wrap_streamfile(sf);
+    new_sf = open_clamp_streamfile_f(new_sf, subfile_offset, subfile_size);
     if (extension) {
-        new_streamFile = open_fakename_streamfile(temp_streamFile, NULL,extension);
-        if (!new_streamFile) goto fail;
-        temp_streamFile = new_streamFile;
+        new_sf = open_fakename_streamfile_f(new_sf, NULL, extension);
     }
-
-    return temp_streamFile;
-
-fail:
-    close_streamfile(temp_streamFile);
-    return NULL;
+    return new_sf;
 }

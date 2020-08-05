@@ -13,14 +13,14 @@ VGMSTREAM * init_vgmstream_rsd(STREAMFILE *streamFile) {
 
 
     /* checks */
-    if (!check_extensions(streamFile,"rsd"))
+    if (!check_extensions(streamFile,"rsd,rsp"))
         goto fail;
     if ((read_32bitBE(0x00,streamFile) & 0xFFFFFF00) != 0x52534400) /* "RSD\00" */
         goto fail;
 
     loop_flag = 0;
 
-    codec = read_32bitBE(0x04,streamFile);
+    codec = (uint32_t)read_32bitBE(0x04,streamFile);
     channel_count = read_32bitLE(0x08, streamFile);
     /* 0x0c: always 16? */
     sample_rate = read_32bitLE(0x10, streamFile);

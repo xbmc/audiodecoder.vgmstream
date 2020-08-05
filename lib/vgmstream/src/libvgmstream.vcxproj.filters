@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Header Files">
@@ -71,9 +71,6 @@
     <ClInclude Include="meta\aax_utf.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="meta\acb_utf.h">
-      <Filter>meta\Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="meta\9tav_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
@@ -89,16 +86,31 @@
     <ClInclude Include="meta\bgw_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="meta\bnsf_keys.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="meta\cri_utf.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="meta\deblock_streamfile.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="meta\ea_eaac_streamfile.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="meta\ea_eaac_opus_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="meta\ea_schl_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="meta\fsb_encrypted_streamfile.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="meta\fsb_interleave_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="meta\fsb5_interleave_streamfile.h">
+    <ClInclude Include="meta\fsb5_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="meta\jstm_streamfile.h">
@@ -107,10 +119,22 @@
     <ClInclude Include="meta\kma9_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="meta\lrmd_streamfile.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="meta\mta2_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="meta\mul_streamfile.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="meta\mups_streamfile.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="meta\mzrt_streamfile.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="meta\nus3bank_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="meta\ogg_vorbis_streamfile.h">
@@ -128,10 +152,22 @@
     <ClInclude Include="meta\xavs_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="meta\xnb_streamfile.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="meta\xnb_lz4mg.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="meta\riff_ogg_streamfile.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="meta\sfh_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="meta\sqex_scd_streamfile.h">
+      <Filter>meta\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="meta\sqex_sead_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="meta\txth_streamfile.h">
@@ -143,7 +179,7 @@
     <ClInclude Include="meta\ubi_sb_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="meta\ubi_lyn_ogg_streamfile.h">
+    <ClInclude Include="meta\ubi_lyn_streamfile.h">
       <Filter>meta\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="meta\meta.h">
@@ -161,10 +197,28 @@
     <ClInclude Include="coding\acm_decoder_libacm.h">
       <Filter>coding\Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="coding\circus_decoder_lib.h">
+      <Filter>coding\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="coding\circus_decoder_lib_data.h">
+      <Filter>coding\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="coding\circus_decoder_lzxpcm.h">
+      <Filter>coding\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="coding\circus_decoder_miniz.h">
+      <Filter>coding\Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="coding\coding.h">
       <Filter>coding\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="coding\ea_mt_decoder_utk.h">
+      <Filter>coding\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="coding\g7221_decoder_aes.h">
+      <Filter>coding\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="coding\g7221_decoder_lib_data.h">
       <Filter>coding\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="coding\fsb_vorbis_data.h">
@@ -205,6 +259,9 @@
     </ClInclude>
     <ClInclude Include="meta\zsnd_streamfile.h">
       <Filter>meta\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="coding\g7221_decoder_lib.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -340,6 +397,12 @@
     <ClCompile Include="meta\ck.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="meta\cri_utf.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\csb.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="meta\csmp.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
@@ -350,6 +413,9 @@
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\dcs_wav.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\deblock_streamfile.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\dc_idvi.c">
@@ -394,7 +460,13 @@
     <ClCompile Include="meta\ea_wve_ad10.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="meta\encrypted.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="meta\mul.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\mups.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\exakt_sc.c">
@@ -416,6 +488,9 @@
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\fsb_encrypted.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\fwse.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\gca.c">
@@ -458,6 +533,9 @@
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\idsp_ie.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\isb.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\ish_isd.c">
@@ -520,7 +598,10 @@
     <ClCompile Include="meta\nds_rrds.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="meta\nds_sad.c">
+    <ClCompile Include="meta\sadf.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\sadl.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\nds_strm.c">
@@ -529,7 +610,7 @@
     <ClCompile Include="meta\nds_strm_ffta2.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="meta\nds_swav.c">
+    <ClCompile Include="meta\swav.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\ngc_adpdtk.c">
@@ -586,7 +667,7 @@
     <ClCompile Include="meta\ngc_ulw.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="meta\ngc_vid1.c">
+    <ClCompile Include="meta\vid1.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\nus3audio.c">
@@ -628,7 +709,7 @@
     <ClCompile Include="meta\p3d.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="meta\pc_al2.c">
+    <ClCompile Include="meta\raw_al.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\pc_mxst.c">
@@ -641,6 +722,9 @@
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\pcm_sre.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\pcm_success.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\scd_pcm.c">
@@ -856,6 +940,9 @@
     <ClCompile Include="meta\fag.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="meta\fda.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="meta\ffdl.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
@@ -955,9 +1042,6 @@
     <ClCompile Include="meta\strm_abylight.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="meta\stx.c">
-      <Filter>meta\Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="meta\svs.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
@@ -977,6 +1061,9 @@
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\ubi_ckd.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\ubi_hx.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\ubi_lyn.c">
@@ -1060,9 +1147,6 @@
     <ClCompile Include="meta\xavs.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="meta\xbox_hlwav.c">
-      <Filter>meta\Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="meta\xbox_ims.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
@@ -1076,6 +1160,9 @@
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\xss.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\xssb.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\xvag.c">
@@ -1150,10 +1237,19 @@
     <ClCompile Include="coding\g7221_decoder.c">
       <Filter>coding\Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="coding\g7221_decoder_aes.c">
+      <Filter>coding\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="coding\g7221_decoder_lib.c">
+      <Filter>coding\Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="coding\hca_decoder.c">
       <Filter>coding\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="coding\ima_decoder.c">
+      <Filter>coding\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="coding\imuse_decoder.c">
       <Filter>coding\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="coding\l5_555_decoder.c">
@@ -1216,6 +1312,12 @@
     <ClCompile Include="coding\ptadpcm_decoder.c">
       <Filter>coding\Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="coding\relic_decoder.c">
+      <Filter>coding\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="coding\relic_decoder_mixfft.c">
+      <Filter>coding\Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="coding\sassc_decoder.c">
       <Filter>coding\Source Files</Filter>
     </ClCompile>
@@ -1223,6 +1325,9 @@
       <Filter>coding\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="coding\ubi_adpcm_decoder.c">
+      <Filter>coding\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="coding\vadpcm_decoder.c">
       <Filter>coding\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="coding\ws_decoder.c">
@@ -1277,6 +1382,9 @@
       <Filter>layout\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="layout\blocked_vgs.c">
+      <Filter>layout\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="layout\blocked_vid1.c">
       <Filter>layout\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="layout\blocked_vs_square.c">
@@ -1411,6 +1519,9 @@
     <ClCompile Include="layout\blocked_tra.c">
       <Filter>layout\Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="layout\blocked_ubi_sce.c">
+      <Filter>layout\Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="coding\lsf_decoder.c">
       <Filter>coding\Source Files</Filter>
     </ClCompile>
@@ -1454,6 +1565,9 @@
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\imc.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\imuse.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\pc_adp.c">
@@ -1501,7 +1615,7 @@
     <ClCompile Include="meta\ps2_2pfs.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="meta\ps3_ivag.c">
+    <ClCompile Include="meta\ivag.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\mp4.c">
@@ -1535,6 +1649,12 @@
       <Filter>coding\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="coding\circus_decoder.c">
+      <Filter>coding\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="coding\circus_decoder_lib.c">
+      <Filter>coding\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="coding\circus_decoder_miniz.c">
       <Filter>coding\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\bcstm.c">
@@ -1573,6 +1693,9 @@
     <ClCompile Include="meta\xma.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="meta\xma_ue3.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="meta\xnb.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
@@ -1592,6 +1715,12 @@
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\bik.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\bkhd.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\bmp_konami.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\bnk_sony.c">
@@ -1618,7 +1747,16 @@
     <ClCompile Include="meta\mogg.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="meta\ktsr.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="meta\ktss.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\kwb.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\lrmd.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\ps2_va3.c">
@@ -1628,6 +1766,21 @@
       <Filter>meta\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="meta\rad.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\xmv_valve.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="coding\tgcadpcm_decoder.c">
+      <Filter>coding\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\tgc.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\diva.c">
+      <Filter>meta\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="meta\kat.c">
       <Filter>meta\Source Files</Filter>
     </ClCompile>
   </ItemGroup>

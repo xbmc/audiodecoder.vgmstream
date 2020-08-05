@@ -89,7 +89,9 @@ static ao_option *device_options = NULL;
 static ao_sample_format current_sample_format;
 
 static sample_t *buffer = NULL;
-static int buffer_size_kb = 16;
+/* reportedly 1kb helps Raspberry Pi Zero play FFmpeg formats without stuttering
+ * (presumably other low powered devices too), plus it's the default in other plugins */
+static int buffer_size_kb = 1;
 
 static int repeat = 0;
 static int verbose = 0;
@@ -509,6 +511,7 @@ static int play_compressed_file(const char *filename, struct params *par, const 
 
     if (!mkdtemp(temp_dir)) {
         fprintf(stderr, "%s: error creating temp dir for decompression\n", temp_dir);
+        ret = -1;
         goto fail;
     }
 
@@ -567,8 +570,7 @@ static int play_compressed_file(const char *filename, struct params *par, const 
     remove(temp_file);
     remove(temp_dir);
 
-    fail:
-
+fail:
     free(cmd);
     free(temp_file);
 

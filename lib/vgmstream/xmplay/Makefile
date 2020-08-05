@@ -15,7 +15,7 @@ endif
 ### main defs
 OUTPUT_XMPLAY = xmp-vgmstream.dll
 
-CFLAGS += -Wall -Werror=format-security -Wdeclaration-after-statement -Wvla -O3 -DUSE_ALLOCA -DWIN32 -I../ext_includes $(EXTRA_CFLAGS)
+CFLAGS += -ffast-math -O3 -Wall -Werror=format-security -Wdeclaration-after-statement -Wvla -DUSE_ALLOCA -DWIN32 -I../ext_includes $(EXTRA_CFLAGS)
 LDFLAGS += -L../src -L../ext_libs -lm -lvgmstream $(EXTRA_LDFLAGS)
 TARGET_EXT_LIBS = 
 
@@ -39,8 +39,6 @@ endif
 VGM_ENABLE_G7221 = 1
 ifeq ($(VGM_ENABLE_G7221),1) 
   CFLAGS  += -DVGM_USE_G7221
-  LDFLAGS += -lg7221_decode
-  TARGET_EXT_LIBS += libg7221_decode.a
 endif
 
 VGM_ENABLE_G719 = 1

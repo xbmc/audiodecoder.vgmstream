@@ -61,8 +61,6 @@ void interleave_stereo(sample_t * buffer, int32_t sample_count) {
         else
             belongs = (tomove-sample_count)*2+1;
 
-        printf("move %d to %d\n",tomove,belongs);
-
         temp = buffer[belongs];
         buffer[belongs] = moving;
         moving = temp;
@@ -100,15 +98,31 @@ void put_32bitBE(uint8_t * buf, int32_t i) {
     buf[3] = (uint8_t)(i & 0xFF);
 }
 
+int round10(int val) {
+    int round_val = val % 10;
+    if (round_val < 5) /* half-down rounding */
+        return val - round_val;
+    else
+        return val + (10 - round_val);
+}
+
 void swap_samples_le(sample_t *buf, int count) {
+    /* Windows can't be BE... I think */
+#if !defined(_WIN32)
+#if !defined(__BYTE_ORDER__) || __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
     int i;
     for (i = 0; i < count; i++) {
+        /* 16b sample in memory: aabb where aa=MSB, bb=LSB */
         uint8_t b0 = buf[i] & 0xff;
         uint8_t b1 = buf[i] >> 8;
         uint8_t *p = (uint8_t*)&(buf[i]);
+        /* 16b sample in buffer: bbaa where bb=LSB, aa=MSB */
         p[0] = b0;
         p[1] = b1;
+        /* when endianness is LE, buffer has bbaa already so this function can be skipped */
     }
+#endif
+#endif
 }
 
 /* length is maximum length of dst. dst will always be null-terminated if

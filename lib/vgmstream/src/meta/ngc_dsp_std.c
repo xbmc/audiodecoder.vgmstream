@@ -6,26 +6,25 @@
 /* If these variables are packed properly in the struct (one after another)
  * then this is actually how they are laid out in the file, albeit big-endian */
 struct dsp_header {
-    uint32_t sample_count;
-    uint32_t nibble_count;
-    uint32_t sample_rate;
-    uint16_t loop_flag;
-    uint16_t format;
-    uint32_t loop_start_offset;
-    uint32_t loop_end_offset;
-    uint32_t ca;
-    int16_t coef[16]; /* really 8x2 */
-    uint16_t gain;
-    uint16_t initial_ps;
-    int16_t initial_hist1;
-    int16_t initial_hist2;
-    uint16_t loop_ps;
-    int16_t loop_hist1;
-    int16_t loop_hist2;
-    int16_t channel_count; /* DSPADPCM.exe ~v2.7 extension */
-    int16_t block_size;
-    /* padding/reserved up to 0x60 */
-    /* DSPADPCM.exe from GC adds some extra data here (uninitialized MSVC memory?) */
+    uint32_t sample_count;      /* 0x00 */
+    uint32_t nibble_count;      /* 0x04 */
+    uint32_t sample_rate;       /* 0x08 */
+    uint16_t loop_flag;         /* 0x0c */
+    uint16_t format;            /* 0x0e */
+    uint32_t loop_start_offset; /* 0x10 */
+    uint32_t loop_end_offset;   /* 0x14 */
+    uint32_t ca;                /* 0x18 */
+    int16_t coef[16];           /* 0x1c (really 8x2) */
+    uint16_t gain;              /* 0x3c */
+    uint16_t initial_ps;        /* 0x3e */
+    int16_t initial_hist1;      /* 0x40 */
+    int16_t initial_hist2;      /* 0x42 */
+    uint16_t loop_ps;           /* 0x44 */
+    int16_t loop_hist1;         /* 0x46 */
+    int16_t loop_hist2;         /* 0x48 */
+    int16_t channel_count;      /* 0x4a (DSPADPCM.exe ~v2.7 extension) */
+    int16_t block_size;         /* 0x4c */
+    /* padding/reserved up to 0x60, DSPADPCM.exe from GC adds garbage here (uninitialized MSVC memory?) */
 };
 
 /* read the above struct; returns nonzero on failure */
@@ -598,8 +597,8 @@ fail:
     return NULL;
 }
 
-/* IDSP - Namco header (from NUS3) + interleaved dsp [SSB4 (3DS), Tekken Tag Tournament 2 (WiiU)] */
-VGMSTREAM * init_vgmstream_idsp_nus3(STREAMFILE *streamFile) {
+/* IDSP - Namco header (from NUB/NUS3) + interleaved dsp [SSB4 (3DS), Tekken Tag Tournament 2 (WiiU)] */
+VGMSTREAM * init_vgmstream_idsp_namco(STREAMFILE *streamFile) {
     dsp_meta dspm = {0};
 
     /* checks */
@@ -607,21 +606,26 @@ VGMSTREAM * init_vgmstream_idsp_nus3(STREAMFILE *streamFile) {
         goto fail;
     if (read_32bitBE(0x00,streamFile) != 0x49445350) /* "IDSP" */
         goto fail;
-    /* 0x0c: sample rate, 0x10: num_samples, 0x14: loop_start_sample, 0x18: loop_start_sample */
 
-    dspm.channel_count = read_32bitBE(0x08, streamFile);
     dspm.max_channels = 8;
     /* games do adjust loop_end if bigger than num_samples (only happens in user-created IDSPs) */
     dspm.fix_looping = 1;
 
+    /* 0x04: null */
+    dspm.channel_count = read_32bitBE(0x08, streamFile);
+    /* 0x0c: sample rate */
+    /* 0x10: num_samples */
+    /* 0x14: loop start */
+    /* 0x18: loop end */
+    dspm.interleave = read_32bitBE(0x1c,streamFile); /* usually 0x10 */
     dspm.header_offset = read_32bitBE(0x20,streamFile);
     dspm.header_spacing = read_32bitBE(0x24,streamFile);
     dspm.start_offset = read_32bitBE(0x28,streamFile);
-    dspm.interleave = read_32bitBE(0x1c,streamFile); /* usually 0x10 */
-    if (dspm.interleave == 0) /* Taiko no Tatsujin: Atsumete Tomodachi Daisakusen (WiiU) */
-        dspm.interleave = read_32bitBE(0x2c,streamFile); /* half interleave, use channel size */
+    /* Soul Calibur: Broken destiny (PSP), Taiko no Tatsujin: Atsumete Tomodachi Daisakusen (WiiU) */
+    if (dspm.interleave == 0) /* half interleave (happens sometimes), use channel size */
+        dspm.interleave = read_32bitBE(0x2c,streamFile);
 
-    dspm.meta_type = meta_IDSP_NUS3;
+    dspm.meta_type = meta_IDSP_NAMCO;
     return init_vgmstream_dsp_common(streamFile, &dspm);
 fail:
     return NULL;
@@ -651,48 +655,6 @@ fail:
     return NULL;
 }
 
-/* sadf - Procyon Studio Header Variant [Xenoblade Chronicles 2 (Switch)] (sfx) */
-VGMSTREAM * init_vgmstream_sadf(STREAMFILE *streamFile) {
-    VGMSTREAM * vgmstream = NULL;
-    int  channel_count, loop_flag;
-    off_t start_offset;
-
-	/* checks */
-    if (!check_extensions(streamFile, "sad"))
-        goto fail;
-    if (read_32bitBE(0x00, streamFile) != 0x73616466) /* "sadf" */
-        goto fail;
-
-    channel_count = read_8bit(0x18, streamFile);
-    loop_flag = read_8bit(0x19, streamFile);
-    start_offset = read_32bitLE(0x1C, streamFile);
-
-	/* build the VGMSTREAM */
-    vgmstream = allocate_vgmstream(channel_count, loop_flag);
-    if (!vgmstream) goto fail;
-
-    vgmstream->num_samples = read_32bitLE(0x28, streamFile);
-    vgmstream->sample_rate = read_32bitLE(0x24, streamFile);
-    if (loop_flag) {
-		vgmstream->loop_start_sample = read_32bitLE(0x2c, streamFile);
-		vgmstream->loop_end_sample = read_32bitLE(0x30, streamFile);
-	 }
-    vgmstream->coding_type = coding_NGC_DSP;
-    vgmstream->layout_type = layout_interleave;
-    vgmstream->interleave_block_size = channel_count == 1 ? 0x8 :
-		read_32bitLE(0x20, streamFile) / channel_count;
-    vgmstream->meta_type = meta_DSP_SADF;
-
-    dsp_read_coefs_le(vgmstream, streamFile, 0x80, 0x80);
-
-    if (!vgmstream_open_stream(vgmstream, streamFile, start_offset))
-		goto fail;
-    return vgmstream;
-
-fail:
-    close_vgmstream(vgmstream);
-    return NULL;
-}
 
 /* IDSP - Traveller's Tales header + interleaved dsps [Lego Batman (Wii), Lego Dimensions (Wii U)] */
 VGMSTREAM * init_vgmstream_idsp_tt(STREAMFILE *streamFile) {
