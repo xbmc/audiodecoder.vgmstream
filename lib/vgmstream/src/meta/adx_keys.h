@@ -184,6 +184,18 @@ static const adxkey_info adxkey8_list[] = {
         /* Gintama Gin-san to Issho! Boku no Kabukichou Nikki (PS2) [Bandai Namco?] */
         {0x67CD,0x5CA7,0x655F, "gt25809",0},
 
+        /* Lucky Star: RAvish Romance (PS2) [Vridge] */
+        {0x5347,0x4FB7,0x6415, "LUCKYSRARPS2",0},
+
+        /* Katekyoo Hitman Reborn! Nerae! Ring x Bongole Trainers (PS2) */
+        {0x61C7,0x4549,0x4337, "ORN2HITMAN",0},
+
+        /* Katekyoo Hitman Reborn! Let's Ansatsu! Nerawareta 10-daime! (PS2) */
+        {0x5381,0x52E5,0x53E9, "REBHITMAN",0},
+
+        /* 428: Fuusasareta Shibuya de (PS3) */
+        {0x52ff,0x649f,0x448f, "hj1kviaqqdzUacryoacwmscfvwtlfkVbbbqpqmzqnbile2euljywazejgyxxvqlf",0},
+
 };
 
 static const adxkey_info adxkey9_list[] = {
@@ -218,6 +230,15 @@ static const adxkey_info adxkey9_list[] = {
 
         /* Mashiro Witch (Android) */
         {0x2669,0x1495,0x2407, NULL,0x55D11D3349495204},    // 55D11D3349495204
+
+        /* Nogizaka46 Rhythm Festival (Android) */
+        {0x2378,0x5511,0x0201, NULL,5613126134333697},      // 0013F11BC5510101
+
+        /* Detective Conan Runner / Case Closed Runner (Android) */
+        {0x0613,0x0e3d,0x6dff, NULL,1175268187653273344},   // 104f643098e3f700
+
+        /* Persona 5 Royal (PS4) */
+        {0x0000,0x1c85,0x7043, NULL,29915170},              // 0000000001C87822
 
 };
 

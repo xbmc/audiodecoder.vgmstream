@@ -10,6 +10,7 @@ typedef struct {
     double song_fade_time;
     double song_fade_delay;
     int song_ignore_loop;
+    int song_force_loop;
     int song_really_force_loop;
     int song_ignore_fade;
 } foobar_song_config;
@@ -78,6 +79,8 @@ class input_vgmstream : public input_stubs {
         bool tagfile_disable;
         pfc::string8 tagfile_name;
         bool override_title;
+      //bool exts_common_on;
+      //bool exts_unknown_on;
 
         /* song config */
         foobar_song_config config;
@@ -90,6 +93,8 @@ class input_vgmstream : public input_stubs {
         bool get_description_tag(pfc::string_base & temp, pfc::string_base const& description, const char *tag, char delimiter = '\n');
         void set_config_defaults(foobar_song_config *current);
         void apply_config(VGMSTREAM * vgmstream, foobar_song_config *current);
+
+        static void g_load_cfg(int *accept_unknown, int *accept_common);
 };
 
 /* foo_streamfile.cpp */

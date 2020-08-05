@@ -172,7 +172,7 @@ VGMSTREAM * init_vgmstream_opus_capcom(STREAMFILE *streamFile) {
     /* 0x30+: extra chunks (0x00: 0x7f, 0x04: num_sample), alt loop starts/regions? */
 
     if (channel_count == 6) {
-        /* 2ch multistream hacky-hacks, don't try this at home. We'll end up with:
+        /* 2ch multistream hacky-hacks in RE:RE, don't try this at home. We'll end up with:
          * main vgmstream > N vgmstream layers > substream IO deinterleaver > opus meta > Opus IO transmogrifier (phew) */
         layered_layout_data* data = NULL;
         int layers = channel_count / 2;
@@ -193,11 +193,11 @@ VGMSTREAM * init_vgmstream_opus_capcom(STREAMFILE *streamFile) {
 
         /* open each layer subfile */
         for (i = 0; i < layers; i++) {
-            STREAMFILE* temp_streamFile = setup_opus_interleave_streamfile(streamFile, offset+0x28*i, layers);
-            if (!temp_streamFile) goto fail;
+            STREAMFILE* temp_sf = setup_opus_interleave_streamfile(streamFile, offset, i, layers);
+            if (!temp_sf) goto fail;
 
-            data->layers[i] = init_vgmstream_opus(temp_streamFile, meta_OPUS, 0x00, num_samples,loop_start,loop_end);
-            close_streamfile(temp_streamFile);
+            data->layers[i] = init_vgmstream_opus(temp_sf, meta_OPUS, 0x00, num_samples,loop_start,loop_end);
+            close_streamfile(temp_sf);
             if (!data->layers[i]) goto fail;
         }
 
@@ -308,22 +308,37 @@ VGMSTREAM * init_vgmstream_opus_sps_n1(STREAMFILE *streamFile) {
     int num_samples, loop_start = 0, loop_end = 0, loop_flag;
 
     /* checks */
-    /* .sps: Labyrinth of Refrain - Coven of Dusk (Switch)
-     * .nlsd: Disgaea Refine (Switch), Ys VIII (Switch) */
-    if (!check_extensions(streamFile, "sps,nlsd"))
+    /* .sps: Labyrinth of Refrain: Coven of Dusk (Switch)
+     * .nlsd: Disgaea Refine (Switch), Ys VIII (Switch)
+     * .at9: void tRrLM(); //Void Terrarium (Switch) */
+    if (!check_extensions(streamFile, "sps,nlsd,at9"))
         goto fail;
     if (read_32bitBE(0x00, streamFile) != 0x09000000) /* file type (see other N1 SPS) */
         goto fail;
 
-    offset = 0x1C;
     num_samples = read_32bitLE(0x0C, streamFile);
 
-    /* sections num_samples (remnant of segmented opus_sps_n1):
-     * 0x10: intro, 0x14: loop, 0x18: end (all must add up to num_samples) */
-    loop_flag = read_32bitLE(0x18, streamFile); /* with loop disabled only loop section has samples */
-    if (loop_flag) {
+    if (read_32bitBE(0x1c, streamFile) == 0x01000080) {
+        offset = 0x1C;
+
+        /* older games loop section (remnant of segmented opus_sps_n1): */
+        loop_start = read_32bitLE(0x10, streamFile); /* intro samples */
+        loop_end = loop_start + read_32bitLE(0x14, streamFile); /* loop samples */
+        /* 0x18: end samples (all must add up to num_samples) */
+        loop_flag = read_32bitLE(0x18, streamFile); /* with loop disabled only loop_end has a value */
+    }
+    else {
+        offset = 0x18;
+
+        /* newer games loop section: */
         loop_start = read_32bitLE(0x10, streamFile);
-        loop_end = loop_start + read_32bitLE(0x14, streamFile);
+        loop_end = read_32bitLE(0x14, streamFile);
+        loop_flag = loop_start != loop_end; /* with loop disabled start and end are the same as num samples */
+    }
+
+    if (!loop_flag) {
+        loop_start = 0;
+        loop_end = 0;
     }
 
     return init_vgmstream_opus(streamFile, meta_OPUS, offset, num_samples, loop_start, loop_end);
@@ -386,6 +401,53 @@ VGMSTREAM * init_vgmstream_opus_prototype(STREAMFILE *streamFile) {
         loop_end = read_32bitLE(0x10, streamFile);
     }
 
+    return init_vgmstream_opus(streamFile, meta_OPUS, offset, num_samples, loop_start, loop_end);
+fail:
+    return NULL;
+}
+
+/* Edelweiss variation [Astebreed (Switch)] */
+VGMSTREAM * init_vgmstream_opus_opusnx(STREAMFILE *streamFile) {
+    off_t offset = 0;
+    int num_samples = 0, loop_start = 0, loop_end = 0;
+
+    /* checks */
+    if (!check_extensions(streamFile, "opus,lopus"))
+        goto fail;
+    if (read_64bitBE(0x00, streamFile) != 0x4F5055534E580000) /* "OPUSNX\0\0" */
+        goto fail;
+
+    offset = 0x10;
+    num_samples = 0; //read_32bitLE(0x08, streamFile); /* samples with encoder delay */
+    if (read_32bitLE(0x0c, streamFile) != 0)
+        goto fail;
+
+    return init_vgmstream_opus(streamFile, meta_OPUS, offset, num_samples, loop_start, loop_end);
+fail:
+    return NULL;
+}
+
+/* Square Enix variation [Dragon Quest I-III (Switch)] */
+VGMSTREAM * init_vgmstream_opus_sqex(STREAMFILE *streamFile) {
+    off_t offset = 0;
+    int num_samples = 0, loop_start = 0, loop_end = 0, loop_flag;
+    
+    /* checks */
+    if (!check_extensions(streamFile, "opus,lopus"))
+        goto fail;
+    if (read_64bitBE(0x00, streamFile) != 0x0100000002000000)
+        goto fail;
+    
+    offset = read_32bitLE(0x0C, streamFile);
+    num_samples = read_32bitLE(0x1C, streamFile);
+    
+    /* Check if there's a loop end value to determine loop_flag*/
+    loop_flag = read_32bitLE(0x18, streamFile);
+    if (loop_flag) {
+        loop_start = read_32bitLE(0x14, streamFile);
+        loop_end = read_32bitLE(0x18, streamFile);
+    }
+    
     return init_vgmstream_opus(streamFile, meta_OPUS, offset, num_samples, loop_start, loop_end);
 fail:
     return NULL;

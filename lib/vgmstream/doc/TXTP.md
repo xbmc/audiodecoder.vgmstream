@@ -12,20 +12,24 @@ file1
 ...
 fileN
 
-mode = (mode)  # "segments" is the default if not set
+mode = (segments|layers|mixed)  # "segments" is the default if not set
 ```
-You can set commands to alter how files play (described later). Having a single file is ok too, so are subdirs:
-```
-# set "subsong" command for single file inside subdir
-sounds/file#12
 
-# will be ignored as none make sense here and is treated as "single" mode
-#mode = layers/segments/mixed
+You can set commands to alter how files play (described later), and having a single file is ok too:
+```
+file#12     # set "subsong" command for single file
+
+#mode is ignored here as there is only one file
 ``` 
+
+*files* may be anything accepted by the file system (including spaces and symbols), and you can use subdirs. Separators can be `\` or `/`, but stick to `/` for consistency. Commands may be chained and use spaces as needed (also see "TXTP parsing" section).
+```
+sounds/bgm.fsb #s2 #i  #for file inside subdir: play subsong 2 + disable looping
+```
 
 
 ### Segments mode
-Some games clumsily loop audio by using multiple full file "segments", so you can play separate intro + loop files together as a single track. Channel number must be equal, mixing sample rates is ok (uses first).
+Some games clumsily loop audio by using multiple full file "segments", so you can play separate intro + loop files together as a single track.
  
 **Ratchet & Clank (PS2)**: *bgm01.txtp*
 ```
@@ -38,6 +42,16 @@ loop_start_segment = 2 # 2nd file start
 loop_end_segment = 2 # optional, default is last
 mode = segments # optional, default is segments
 ```
+You can (should) set looping to the last segment like this:
+```
+BGM01_BEGIN.VAG
+BGM01_LOOPED.VAG
+
+# equivalent to loop_start_segment = 2, loop_end_segment = 2
+# (only for multiple segments, to repeat a single file use #E)
+loop_mode = auto
+```
+
 
 If your loop segment has proper loops you want to keep, you can use:
 ```
@@ -57,6 +71,8 @@ loop_start_segment = 2
 loop_end_segment = 3
 loop_mode = keep    # loops in 2nd file's loop_start to 3rd file's loop_end
 ```
+Mixing sample rates is ok (uses first) but channel number must be equal for all files. You can use mixing (explained later) to join segments of different channels though.
+
 
 ### Layers mode
 Some games layer channels or dynamic parts that must play at the same time, for example main melody + vocal track.
@@ -79,7 +95,7 @@ BIK_E1_6A_DialEnd_00000000.audio.multi.bik#3
 
 mode = layers
 ```
-Note that the number of channels is the sum of all layers, so three 2ch layers play as a 6ch file. If all layers share loop points they are automatically kept.
+Note that the number of channels is the sum of all layers, so three 2ch layers play as a 6ch file (you can downmix to stereo using mixing commands, described later). If all layers share loop points they are automatically kept.
 
 ### Mixed groups
 You can set "groups" to 'fold' various files into one, as layers or segments, to allow complex cases:
@@ -154,7 +170,7 @@ mainB_2ch.at3
 group = 2L2 #@layer-v 2
 
 # finally resulting layers are played as segments (2ch, 2ch)
-# (could set a group = S and ommit S here, too)
+# (could set a group = S and ommit mode here, too)
 mode = segments
 
 # if the last group joins all as segments you can use loop_start
@@ -164,12 +180,12 @@ loop_mode = keep
 
 
 ## TXTP COMMANDS
-You can set file commands by adding multiple `#(command)` after the name. `# (anything)` is considered a comment and ignored, as well as any command not understood.
+You can set file commands by adding multiple `#(command)` after the name. `#(space)(anything)` is considered a comment and ignored, as well as any command not understood.
 
 ### Subsong selection for bank formats
 **`#(number)` or `#s(number)`**: set subsong (number)
 
-**Super Robot Taisen OG Saga - Masou Kishin III - Pride of Justice (Vita)**: *bgm_12.txtp*
+**Super Robot Taisen OG Saga: Masou Kishin III - Pride of Justice (Vita)**: *bgm_12.txtp*
 ```
 # select subsong 12
 bgm.sxd2#12
@@ -180,7 +196,7 @@ bgm.sxd2#12
 ```
 
 ### Play segmented subsong ranges as one
-**`#(number)~(number)` or `#s(number)~(number)`**: set multiple subsong segments at a time, to avoid so much C&P
+**`#(number)~(number)` or `#s(number)~(number)`**: set multiple subsong segments at a time, to avoid so much C&P.
 
 **Prince of Persia Sands of Time**: *song_01.txtp*
 ```
@@ -199,68 +215,99 @@ song#3#h22050
 ```
 
 
-### Channel mask for channel subsongs/layers
-**`#c(number)`** (single) or **`#c(number)~(number)`** (range): set number of channels to play. You can add multiple comma-separated numbers, or use ` ` space or `-` as separator and combine multiple ranges with single channels too.
+### Channel removing/masking for channel subsongs/layers
+**`C(number)`** (single) or **`#C(number)~(number)`** (range), **`#c(number)`**: set number of channels to play. You can add multiple comma-separated numbers, or use ` ` space or `-` as separator and combine multiple ranges with single channels too.
+
+If you use **`C(number)`** (uppercase) it will remove non-selected channels. This just a shortcut for macro `#@track` (described later):
+
+If you use **`c(number)`** (lowercase) it doesn't change the final number of channels, just mutes non-selected channels (for backwards compatibility).
 
 **Final Fantasy XIII-2**: *music_Home_01.ps3.txtp*
 ```
 #plays channels 1 and 2 = 1st subsong
-music_Home.ps3.scd#c1,2
+music_Home.ps3.scd#C1,2
 ```
-
 ```
-#plays channels 3 and 4 = 2nd subsong
+#plays channels 3 and 4 = 2nd subsong (muting 1 and 2)
 music_Home.ps3.scd#c3 4
 
 #plays 1 to 3
-music_Home.ps3.scd#c1~3
-```
-Doesn't change the final number of channels though, just mutes non-selected channels.
-
-If you use **`C(number)`** it will remove non-selected channels (not done directly for backwards compatibility). This just a shortcut for macro `#@track` (described later):
-```
-#plays channels 3 and 4 = 2nd subsong and removes other channels
-music_Home.ps3.scd#C3 4
+music_Home.ps3.scd#C1~3
 ```
 
 
-### Custom play settings
-**`#l(loops)`**, **`#f(fade)`**, **`#d(fade-delay)`**, **`#i(ignore loop)`**, **`#F(ignore fade)`**, **`#E(end-to-end loop)`**
+### Play settings
+**`#L`**: play forever (if loops are set and player supports it)
+**`#l(loops)`**: set target number of loops (if file loops)
+**`#f(fade time)`**: set (in seconds) how long the fade out lasts (if file loops)
+**`#d(fade delay)`**: set (in seconds) the delay before fade kicks in after last loop (if file loops)
+**`#F`**: don't fade out after N loops but continue playing the song's original end (if file loops)
+**`#e`**: set full looping (end-to-end) but only if file doesn't have loop points (mainly for autogenerated .txtp)
+**`#E`**: force full looping (end-to-end), overriding original loop points
+**`#i`**: ignore and disable loop points, simply stopping after song's sample count (if file loops)
 
-Those setting should override player's defaults if set (except "loop forever"). They are equivalent to some test.exe options.
+They are equivalent to some `test.exe/vgmstream_cli` options. Settings should mix with or override player's defaults. If player has "play forever" setting loops disables it (while other options don't quite apply), while forcing full loops would allow to play forever, or setting ignore looping would disable it.
 
-**God Hand (PS2)**: *boss2_3ningumi_ver6.txtp* (each line is a separate TXTP)
+
+**God Hand (PS2)**: *boss2_3ningumi_ver6.txtp*
 ```
-# set number of loops
-boss2_3ningumi_ver6.adx#l3
-
-# set fade time (in seconds)
-boss2_3ningumi_ver6.adx#f10.5
-
-# set fade delay (in seconds)
-boss2_3ningumi_ver6.adx#d0.5
-
-# ignore and disable loops
-boss2_3ningumi_ver6.adx#i
-
-# don't fade out and instead play the song ending after
-boss2_3ningumi_ver6.adx#F  # this song has a nice stop
-
-# force full loops from end-to-end
-boss2_3ningumi_ver6.adx#E
-
-# settings can be combined
-boss2_3ningumi_ver6.adx#l2#F  # 2 loops + ending
-
-# settings can be combined
-boss2_3ningumi_ver6.adx#l1.5#d1#f5
-
-# boss2_3ningumi_ver6.adx#l1.0#F  # this is equivalent to #i
+boss2_3ningumi_ver6.adx#l3          #default is usually 2.0
 ```
+```
+boss2_3ningumi_ver6.adx#f11.5       #default is usually 10.0
+```
+```
+boss2_3ningumi_ver6.adx#d0.5        #default is usually 0.0
+```
+```
+boss2_3ningumi_ver6.adx#i           #this song has a nice stop
+```
+```
+boss2_3ningumi_ver6.adx#F           #loop some then hear that stop
+```
+```
+boss2_3ningumi_ver6.adx#e           #song has loops, so ignored here
+```
+```
+boss2_3ningumi_ver6.adx#E           #force full loops
+```
+```
+boss2_3ningumi_ver6.adx#L           #keep on loopin'
+```
+```
+boss2_3ningumi_ver6.adx  #l 3 #F    #combined: 3 loops + ending
+```
+```
+boss2_3ningumi_ver6.adx #l1.5#d1#f5 #combined: partial loops + some delay + smaller fade
+```
+```
+# boss2_3ningumi_ver6.adx #l1.0 #F  #combined: equivalent to #i
+```
+
+
+### Time modifications
+**`#t(time)`**: trims the file so base duration (before applying loops/fades/etc) is `(time)`. If value is negative substracts `(time)` to duration. Loop end is adjusted when necessary, and ignored if value is bigger than possible (use `#l(loops)` config to extend time instead).
+
+Time values can be `M:S(.n)` (minutes and seconds), `S.n` (seconds with dot), `0xN` (samples in hex format) or `N` (samples). Beware of the subtle difference between 10.0 (ten seconds) and 10 (ten samples). 
+
+Some segments have padding/silence at the end for some reason, that don't allow smooth transitions. You can fix it like this:
+```
+intro.fsb #t -1.0    #intro segment has 1 second of silence.
+main.fsb
+```
+
+Similarly other games don't use loop points, but rather repeat/loops the song internally many times:
+```
+bgm01.vag #t3:20 #i #l1.0   # trim + combine with forced loops for easy fades
+```
+
+Note that if you need to remove very few samples (like 1) to get smooth transitions it may be a bug in vgmstream, consider reporting.
 
 
 ### Force sample rate
-**`#h(sample rate)`**: for a few games that set a sample rate value in the header but actually play with other (applying some of pitch or just forcing it).
+**`#h(sample rate)`**: changes sample rate to selected value (within some limits).
+
+Needed for a few games set a sample rate value in the header but actually play with other (applying some of pitch or just forcing it).
 
 **Super Paper Mario (Wii)**
 ```
@@ -273,9 +320,9 @@ ptp_btl_bgm_voice.sgd#s1#h11050
 
 
 ### Install loops
-**`#I(loop start time) (loop end time)`**: force/override looping values, same as .pos but nicer. Loop end is optional and defaults to total samples.
+**`#I(loop start time) [loop end time]`**: force/override looping values, same as .pos but nicer. Loop end is optional and defaults to total samples.
 
-Time values can be `M:S(.n)` (minutes and seconds), `S.n` (seconds with dot), `0xN` (samples in hex format) or `N` (samples). Beware of the subtle difference between 10.0 (ten seconds) and 10 (ten samples). Wrong loop values (for example loop end being much larger than file's samples) will be ignored, but there is some leeway when using seconds for the loop end.
+Time values can be `M:S(.n)` (minutes and seconds), `S.n` (seconds, with dot), `0xN` (samples in hex format) or `N` (samples). Beware of the subtle difference between 10.0 (ten seconds) and 10 (ten samples). Wrong loop values (for example loop end being much larger than file's samples) will be ignored, but there is some leeway when using seconds for the loop end.
 
 **Jewels Ocean (PC)**
 ```
@@ -305,17 +352,23 @@ Possible operations:
 - `Nu`: upmix (insert) N ('pushing' all following channels forward)
 - `Nd`: downmix (remove) N ('pulling' all following channels backward)
 - `ND`: downmix (remove) N and all following channels
-- `N(type)(time-start)+(time-length)`: defines a fade
+- `N(type)(position)(time-start)+(time-length)`: defines a fade
   * `type` can be `{` = fade-in, `}` = fade-out, `(` = crossfade-in, `)` = crossfade-out
     * crossfades are better tuned to use when changing between tracks
+  * `(position)` pre-adjusts `(time-start)` to start after certain time (optional)
   * using multiple fades in the same channel will cancel previous fades
     * may only cancel when fade is after previous one
-    * `}` then `{` makes sense, but `}` then `}` will make funny volume bumps
+    * `}` then `{` or `{` then `}` makes sense, but `}` then `}` will make funny volume bumps
+    * example: `1{0:10+0:5, 1}0:30+0:5` fades-in at 10 seconds, then fades-out at 30 seconds
 - `N^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)`: defines full fade envelope
-  * full definition of the above to allow precise volume changes over time
-    * not necessarily fades, as you could set length 0 for volume "bumps", or make volumes 1.0~0.5
-  * pre/post may be -1 to set "file start" and "file end", cancelled by next fade
+  * full definition of a fade envelope to allow precise volume changes over time
+    * not necessarily fades, as you could set length 0 for volume "bumps" like `1.0~0.5`
   * `(shape)` can be `{` = fade, `(` = crossfade, other values are reserved for internal testing and may change anytime
+  * `(time-start)`+`(time-length)` make `(time-end)`
+  * between `(time-pre)` and `(time-start)` song uses `(volume-start)`
+  * between `(time-start)` and `(time-end)` song gradually changes `(volume-start)` to `(volume-end)` (depending on `(shape)`)
+  * between `(time-end)` and `(time-post)` song uses `(volume-end)`
+  * `time-pre/post` may be -1 to set "file start" and "file end", cancelled by next fade
 
 Considering:
 - `N` and `M` are channels (*current* value after previous operators are applied)
@@ -324,6 +377,8 @@ Considering:
 - may use `x` instead of `*` and `_` instead of `:` (for mini-TXTP)
 - `(volume)` is a `N.N` decimal value where 1.0 is 100% base volume
   - negative volume inverts the waveform (for weird effects)
+- `(position)` can be `N.NL` or `NL` = N.N loops
+  - if loop start is 1000 and loop end 5000, `0.0L` = 1000 samples, `1.0L` = 5000 samples, `2.0L` = 9000 samples, etc
 - `(time)` can be `N:NN(.n)` (minutes:seconds), `N.N` (seconds) or `N` (samples)
   - represents the file's global play time, so it may be set after N loops
   - beware of `10.0` (ten seconds) vs `10` (ten samples)
@@ -421,7 +476,7 @@ BGM_0_012_07.wem
 mode = layers
 
 # plays R of BGM_0_012_04 and L of BGM_0_012_07
-commands = #c2,3
+commands = #C2,3
 ```
 
 As it applies at the end, some options with ambiguous or technically hard to handle meanings may be ignored:
@@ -444,18 +499,21 @@ TXTP may even reference other TXTP, or files that require TXTH, for extra comple
 
 
 ### TXTP parsing
-*Filenames* may be anything accepted by the file system, including spaces and symbols, and multiple *commands* can be chained:
+Here is a rough look of how TXTP parses files, so you get a better idea of what's going on if some command fails.
+
+*Filenames* should accept be anything accepted by the file system, and multiple *commands* can be chained:
 ```
-bgm bank#s2#c1,2
+subdir name/bgm bank.fsb#s2#C1,2
+subdir name/bgm bank.fsb #s2  #C1,2 #comment
 ```
 
-You may add spaces as needed (but try to keep it simple and don't go overboard), though commands *must* start with `#(command)` (`#(space)(anything)` is a comment). Commands without corresponding file are ignored too (seen as comments too), while incorrect commands are ignored and skip to next, though the parser may try to make something usable of them (this may be change anytime without warning):
+Commands may add spaces as needed, but try to keep it simple and don't go overboard). They *must* start with `#(command)`, as `#(space)(anything)` is a comment. Commands without corresponding file are ignored too (seen as comments), while incorrect commands are ignored and skip to next, though the parser may try to make something usable of them (this may be change anytime without warning):
 ```
 # those are all equivalent
-song#s2#c1,2
-song    #s2#c1,2   #    comment
-song    #s 2  #c1,2# comment
-song    #s 2 #c   1   ,  2# comment
+song#s2#C1,2
+song    #s2#C1,2   #    comment
+song    #s 2  #C1,2# comment
+song    #s 2 #C   1   ,  2# comment
 
 #s2  #ignores rogue commands/comments
 
@@ -465,17 +523,18 @@ song    #E enable
 song    #E 1
 song    #Enable
 song    #h -48000
+song    #l -2.0
 
 # accepted
 song    #E # comment
-song    #c1, 2, 3
-song    #c  1  2  3
+song    #C1, 2, 3
+song    #C  1  2  3
 
 # ignores first and reads second
-song    #s TWO#c1,2
+song    #s TWO#C1,2
 
-# seen as #s1#c1,2
-song    #s 1,2 #c1,2
+# seen as #s1#C1,2
+song    #s 1,2 #C1,2
 
 # all seen as #h48000
 song    #h48000
@@ -486,7 +545,7 @@ song    #h 48000mhz
 song    #h hz48000
 
 # ignored as channels don't go that high (may be modified on request)
-song    #c32,41
+song    #C32,41
 
 # swaps 1 with 2
 song    #m1-2
@@ -503,24 +562,27 @@ loop_start_segment   =    1  #s2# #commands here are ignored
 
 song
 commands=#s2   # commands here are allowed
-commands= #c1,2
+commands= #C1,2
 ```
 
 Repeated commands overwrite previous setting, except comma-separated commands that are additive:
 ```
 # overwrites, equivalent to #s2
 song#s1#s2
-
+```
+```
 # adds, equivalent to #m1-2,3-4,5-6
 song#m1-2#m3-4
 commands = #m5-6
+# also added to song
+commands = #l 3.0
 ```
 
 The parser is fairly simplistic and lax, and may be erratic with edge cases or behave unexpectedly due to unforeseen use-cases and bugs. As filenames may contain spaces or #, certain name patterns could fool it too. Keep in mind this while making .txtp files.
 
 
 ## MINI-TXTP
-To simplify TXTP creation, if the .txtp doesn't set a name inside its filename is used directly including config. Note that extension must be included (since vgmstream needs a full filename). You can set `commands` inside the .txtp too:
+To simplify TXTP creation, if the .txtp doesn't set a name inside then its filename is used directly, including config. Note that extension must be included (since vgmstream needs a full filename). You can set `commands` inside the .txtp too:
 - *bgm.sxd2#12.txtp*: plays subsong 12
 - *bgm.sxd2#12.txtp*, , inside has `commands = #@volume 0.5`: plays subsong 12 at half volume
 - *bgm.sxd2.txtp*, , inside has `commands =  #12 #@volume 0.5`: plays subsong 12 at half volume
@@ -563,7 +625,7 @@ song#m1+3,2+4,3D
 song#m1+3*0.7,2+4*0.7,3D
 
 # downmix 4ch layers to stereo with equal adjusted volume (common layer mixdown)
-song#m0*0.7,m1*0.7,1+3*0.7,2+4*0.7,3D
+song#m0*0.7,1*0.7,1+3*0.7,2+4*0.7,3D
 
 # downmix stereo to mono (ignored if file is 1ch)
 zelda-cdi.xa#m1d
@@ -591,21 +653,21 @@ song#m1-2,2*0.5
 # fade-in ch3+4 percussion track layer into main track, downmix to stereo
 # (may be split in multiple lines, no difference)
 okami-ryoshima_coast.aix#l2
-commands = #m3(1:10~0:05         # loop happens after ~1:10
-commands = #m4(1:10~0:05         # ch3/4 are percussion tracks
+commands = #m3(1:10+0:05         # loop happens after ~1:10
+commands = #m4(1:10+0:05         # ch3/4 are percussion tracks
 commands = #m1+3*0.707,2+4*0.707 # ch3/4 always mixed but silent until 1:10
 commands = #m3D                  # remove channels after all mixing
 
 # same but fade-out percussion after second loop
 okami-ryoshima_coast.aix#l3
-commands = #m3(1:10~0:05,3)2:20~0:05
-commands = #m4(1:10~0:05,4)2:20~0:05
+commands = #m3(1:10+0:05,3)2:20+0:05
+commands = #m4(1:10+0:05,4)2:20+0:05
 commands = #m1+3*0.707,2+4*0.707,3D
 
 # crossfade exploration and combat sections after loop
 ffxiii-2~eclipse.aix
-commands = #m1)1:50~0:10,m2)1:50~0:10
-commands = #m3(1:50~0:10,m4(1:50~0:10
+commands = #m1)1:50+0:10,2)1:50+0:10
+commands = #m3(1:50+0:10,4(1:50+0:10
 commands = #m1+3,2+4,3D  # won't play at the same time, no volume needed
 
 # ghetto voice removal (invert channel + other channel removes duplicated parts, and vocals are often layered)

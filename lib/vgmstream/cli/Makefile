@@ -18,7 +18,7 @@ ifeq ($(TARGET_OS),Windows_NT)
   CFLAGS += -DWIN32
 endif
 
-CFLAGS += -Wall -Werror=format-security -Wdeclaration-after-statement -Wvla -O3 -DVAR_ARRAYS -I../ext_includes $(EXTRA_CFLAGS)
+CFLAGS += -ffast-math -O3 -Wall -Werror=format-security -Wdeclaration-after-statement -Wvla -DVAR_ARRAYS -I../ext_includes $(EXTRA_CFLAGS)
 LDFLAGS += -L../src -L../ext_libs -lvgmstream $(EXTRA_LDFLAGS) -lm
 TARGET_EXT_LIBS = 
 
@@ -29,6 +29,13 @@ LIBAO_LIB_PATH = ../../libao/bin
 #  CFLAGS += -DVGM_DEBUG_OUTPUT -O0
 #  CFLAGS += -Wold-style-definition -Woverflow -Wpointer-arith -Wstrict-prototypes -pedantic -std=gnu90 -fstack-protector -Wformat
 #endif
+
+
+# config libs
+VGM_ENABLE_G7221 = 1
+ifeq ($(VGM_ENABLE_G7221),1) 
+  CFLAGS  += -DVGM_USE_G7221
+endif
 
 
 ### external libs
@@ -46,13 +53,6 @@ ifeq ($(VGM_ENABLE_MPEG),1)
   CFLAGS  += -DVGM_USE_MPEG
   LDFLAGS += -lmpg123-0
   TARGET_EXT_LIBS += libmpg123-0.a
-endif
-
-VGM_ENABLE_G7221 = 1
-ifeq ($(VGM_ENABLE_G7221),1) 
-  CFLAGS  += -DVGM_USE_G7221
-  LDFLAGS += -lg7221_decode
-  TARGET_EXT_LIBS += libg7221_decode.a
 endif
 
 VGM_ENABLE_G719 = 1

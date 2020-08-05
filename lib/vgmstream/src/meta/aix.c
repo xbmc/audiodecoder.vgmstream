@@ -3,13 +3,15 @@
 #include "aix_streamfile.h"
 
 
-#define MAX_SEGMENTS 50 /* usually segment0=intro, segment1=loop/main, sometimes ~5, rarely ~40 */
+/* usually segment0=intro, segment1=loop/main, sometimes ~5, rarely ~40~115
+ * as pseudo dynamic/multi-song container [Sega Ages 2500 Vol 28 Tetris Collection (PS2)] */
+#define MAX_SEGMENTS 120
 
-static VGMSTREAM *build_segmented_vgmstream(STREAMFILE *streamFile, off_t *segment_offsets, size_t *segment_sizes, int32_t *segment_samples, int segment_count, int layer_count);
+static VGMSTREAM* build_segmented_vgmstream(STREAMFILE* sf, off_t* segment_offsets, size_t* segment_sizes, int32_t* segment_samples, int segment_count, int layer_count);
 
 /* AIX - N segments with M layers (2ch ADX) inside [SoulCalibur IV (PS3), Dragon Ball Z: Burst Limit (PS3)] */
-VGMSTREAM * init_vgmstream_aix(STREAMFILE *sf) {
-    VGMSTREAM * vgmstream = NULL;
+VGMSTREAM* init_vgmstream_aix(STREAMFILE* sf) {
+    VGMSTREAM* vgmstream = NULL;
 
     off_t segment_offsets[MAX_SEGMENTS] = {0};
     size_t segment_sizes[MAX_SEGMENTS] = {0};
@@ -106,11 +108,11 @@ fail:
     return NULL;
 }
 
-static VGMSTREAM *build_layered_vgmstream(STREAMFILE *streamFile, off_t segment_offset, size_t segment_size, int layer_count) {
-    VGMSTREAM *vgmstream = NULL;
+static VGMSTREAM *build_layered_vgmstream(STREAMFILE* sf, off_t segment_offset, size_t segment_size, int layer_count) {
+    VGMSTREAM* vgmstream = NULL;
     layered_layout_data* data = NULL;
     int i;
-    STREAMFILE* temp_streamFile = NULL;
+    STREAMFILE* temp_sf = NULL;
 
 
     /* build layers */
@@ -119,17 +121,17 @@ static VGMSTREAM *build_layered_vgmstream(STREAMFILE *streamFile, off_t segment_
 
     for (i = 0; i < layer_count; i++) {
         /* build the layer STREAMFILE */
-        temp_streamFile = setup_aix_streamfile(streamFile, segment_offset, segment_size, i, "adx");
-        if (!temp_streamFile) goto fail;
+        temp_sf = setup_aix_streamfile(sf, segment_offset, segment_size, i, "adx");
+        if (!temp_sf) goto fail;
 
         /* build the sub-VGMSTREAM */
-        data->layers[i] = init_vgmstream_adx(temp_streamFile);
+        data->layers[i] = init_vgmstream_adx(temp_sf);
         if (!data->layers[i]) goto fail;
 
-        data->layers[i]->stream_size = get_streamfile_size(temp_streamFile);
+        data->layers[i]->stream_size = get_streamfile_size(temp_sf);
 
-        close_streamfile(temp_streamFile);
-        temp_streamFile = NULL;
+        close_streamfile(temp_sf);
+        temp_sf = NULL;
     }
 
     if (!setup_layout_layered(data))
@@ -145,13 +147,13 @@ static VGMSTREAM *build_layered_vgmstream(STREAMFILE *streamFile, off_t segment_
 fail:
     if (!vgmstream) free_layout_layered(data);
     close_vgmstream(vgmstream);
-    close_streamfile(temp_streamFile);
+    close_streamfile(temp_sf);
     return NULL;
 }
 
-static VGMSTREAM *build_segmented_vgmstream(STREAMFILE *streamFile, off_t *segment_offsets, size_t *segment_sizes, int32_t *segment_samples, int segment_count, int layer_count) {
-    VGMSTREAM *vgmstream = NULL;
-    segmented_layout_data *data = NULL;
+static VGMSTREAM *build_segmented_vgmstream(STREAMFILE* sf, off_t* segment_offsets, size_t* segment_sizes, int32_t* segment_samples, int segment_count, int layer_count) {
+    VGMSTREAM* vgmstream = NULL;
+    segmented_layout_data* data = NULL;
     int i, loop_flag, loop_start_segment, loop_end_segment;
 
 
@@ -161,7 +163,7 @@ static VGMSTREAM *build_segmented_vgmstream(STREAMFILE *streamFile, off_t *segme
 
     for (i = 0; i < segment_count; i++) {
         /* build the layered sub-VGMSTREAM */
-        data->segments[i] = build_layered_vgmstream(streamFile, segment_offsets[i], segment_sizes[i], layer_count);
+        data->segments[i] = build_layered_vgmstream(sf, segment_offsets[i], segment_sizes[i], layer_count);
         if (!data->segments[i]) goto fail;
 
         data->segments[i]->num_samples = segment_samples[i]; /* just in case */
@@ -177,7 +179,7 @@ static VGMSTREAM *build_segmented_vgmstream(STREAMFILE *streamFile, off_t *segme
      * - 2 segments: intro + loop [SoulCalibur IV (PS3)]
      * - 3 segments: intro + loop + end [Dragon Ball Z: Burst Limit (PS3), Metroid: Other M (Wii)]
      * - 4/5 segments: intros + loop + ends [Danball Senki (PSP)]
-     * - 39 segments: no loops but multiple segments for dynamic parts? [Tetris Collection (PS2)] */
+     * - +39 segments: no loops but multiple segments for dynamic parts? [Tetris Collection (PS2)] */
     loop_flag = (segment_count > 0 && segment_count <= 5);
     loop_start_segment = (segment_count > 3) ? 2 : 1;
     loop_end_segment = (segment_count > 3) ? (segment_count - 2) : 1;

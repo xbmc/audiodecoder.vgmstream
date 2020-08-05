@@ -25,7 +25,7 @@ start_offset = 0x100        #data starts after exactly this value
 num_samples = data_size     #find automatically number of samples in the file
 loop_flag = auto            #find loop points in PS-ADPCM
 ```
-A text file with the above commands must be saved as `.vag.txth` or `.txth` (preferably the former), notice it starts with a "." (dot). On Windows files starting with a dot can be created by appending a dot at the end when renaming: `.txth.`
+A text file with the above commands must be saved as `.vag.txth` or `.txth` (preferably the former), notice it starts with a "." (dot). On some Windows versions files starting with a dot need to be created by appending a dot at the end when renaming: `.txth.`
 
 While the main point is playing the file, many of TXTH's features are aimed towards keeping original data intact, for documentation and preservation purposes; try leaving data as untouched as possible and consider how the game plays the file, as there is a good chance some feature can mimic it.
 
@@ -49,20 +49,21 @@ The following can be used in place of `(value)` for `(key) = (value)` commands.
   * `$1|2|3|4`: value has size of 8/16/24/32 bit (optional, defaults to 4)
   * Example: `@0x10:BE$2` means `get big endian 16b value at 0x10`
 - `(field)`: uses current value of some fields. Accepted strings:
-  - `interleave, interleave_last, channels, sample_rate, start_offset, data_size, num_samples, loop_start_sample,  loop_end_sample, subsong_count, subsong_offset`
+  - `interleave, interleave_last, channels, sample_rate, start_offset, data_size, num_samples, loop_start_sample,  loop_end_sample, subsong_count, subsong_offset, subfile_offset, subfile_size, base_offset, name_valueX`
 - `(other)`: other special values for certain keys, described per key
 
 
-The above may be combined with math operations (+-*/): `(key) = (number) (op) (offset) (op) (field) (...)`
+The above may be combined with math operations (+-*/&): `(key) = (number) (op) (offset) (op) (field) (...)`
 
 ### KEYS
 
 #### CODEC [REQUIRED]
-Sets codec used to encode the data. Accepted codec strings:
+Sets codec used to encode the data. Some codecs need interleave or other config
+as explained below, but often will use default values. Accepted codec strings:
 ```
 # - PSX            PlayStation ADPCM
 #   * For many PS1/PS2/PS3 games
-#   * Interleave is multiple of 0x10, often +0x1000
+#   * Interleave is multiple of 0x10 (default), often +0x1000
 # - PSX_bf         PlayStation ADPCM with bad flags
 #   * Variation with garbage data, for rare PS2 games
 # - XBOX           Xbox IMA ADPCM (mono/stereo)
@@ -70,18 +71,19 @@ Sets codec used to encode the data. Accepted codec strings:
 #   * Special interleave is multiple of 0x24 (mono) or 0x48 (stereo)
 # - DSP|NGC_DSP    Nintendo GameCube ADPCM
 #   * For many GC/Wii/3DS games
-#   * Interleave is multiple of 0x08, often +0x1000
+#   * Interleave is multiple of 0x08 (default), often +0x1000
 #   * Must set decoding coefficients (coef_offset/spacing/etc)
+#   * Should set ADPCM state (hist_offset/spacing/etc)
 # - DTK|NGC_DTK    Nintendo ADP/DTK ADPCM
 #   * For rare GC games
 # - PCM16LE        PCM 16-bit little endian
 #   * For many games (usually on PC)
-#   * Interleave is multiple of 0x2
+#   * Interleave is multiple of 0x2 (default)
 # - PCM16BE        PCM 16-bit big endian
 #   * Variation for certain consoles (GC/Wii/PS3/X360/etc)
 # - PCM8           PCM 8-bit signed
 #   * For some games (usually on PC)
-#   * Interleave is multiple of 0x1
+#   * Interleave is multiple of 0x1 (default)
 # - PCM8_U         PCM 8-bit unsigned
 #   * Variation with modified encoding
 # - PCM8_U_int     PCM 8-bit unsigned (interleave block)
@@ -91,8 +93,8 @@ Sets codec used to encode the data. Accepted codec strings:
 #   * Special interleave is multiple of 0x1, often +0x80
 # - DVI_IMA        IMA ADPCM (DVI order)
 #   * Variation with modified encoding
-# - YAMAHA|AICA    Yamaha ADPCM (mono/stereo)
-#   * For some Dreamcast games, and some arcade games
+# - AICA           Yamaha AICA ADPCM (mono/stereo)
+#   * For some Dreamcast games, and some arcade (Naomi) games
 #   * Special interleave is multiple of 0x1
 # - APPLE_IMA4     Apple Quicktime IMA ADPCM
 #   * For some Mac/iOS games
@@ -110,13 +112,14 @@ Sets codec used to encode the data. Accepted codec strings:
 # - ATRAC3         Sony ATRAC3
 #   * For some PS2 and PS3 games
 #   * Interleave (frame size) can be 0x60/0x98/0xC0 * channels [required]
-#   * Should set skip_samples (more than 1024 but varies)
+#   * Should set skip_samples (more than 1024+69 but varies)
 # - ATRAC3PLUS     Sony ATRAC3plus
 #   * For many PSP games and rare PS3 games
 #   * Interleave (frame size) can be: [required]
 #     Mono: 0x0118|0178|0230|02E8
 #     Stereo: 0x0118|0178|0230|02E8|03A8|0460|05D0|0748|0800
-#   * Should set skip_samples (more than 2048 but varies)
+#     6/8 channels: multiple of one of the above
+#   * Should set skip_samples (more than 2048+184 but varies)
 # - XMA1           Microsoft XMA1
 #   * For early X360 games
 # - XMA2           Microsoft XMA2
@@ -136,10 +139,16 @@ Sets codec used to encode the data. Accepted codec strings:
 # - PCM4_U         PCM 4-bit unsigned
 #   * Variation with modified encoding
 # - OKI16          OKI ADPCM with 16-bit output (not VOX/Dialogic 12-bit)
-#   * For few PS2 games (Sweet Legacy, Hooligan)
+#   * For rare PS2 games (Sweet Legacy, Hooligan)
 # - AAC            Advanced Audio Coding (raw without .mp4)
 #   * For some 3DS games and many iOS games
 #   * Should set skip_samples (around 1024 but varies)
+# - TGC            Tiger Game.com 4-bit ADPCM
+#   * For Tiger Game.com
+# - ASF            Argonaut ASF ADPCM
+#   * For rare Argonaut games [Croc (SAT)]
+# - EAXA           Electronic Arts EA-XA ADPCM
+#   * For rare EA games [Harry Potter and the Chamber of Secrets (PC)]
 codec = (codec string)
 ```
 
@@ -148,7 +157,7 @@ Changes the behavior of some codecs:
 ```
 # - NGC_DSP: 0=normal interleave, 1=byte interleave, 2=no interleave
 # - XMA1|XMA2: 0=dual multichannel (2ch xN), 1=single multichannel (1ch xN)
-# - XBOX: 0=standard (mono or stereo interleave), 1=force mono interleave mode
+# - XBOX|EAXA: 0=standard (mono or stereo interleave), 1=force mono interleave mode
 # - PCFX: 0=standard, 1='buggy encoder' mode, 2/3=same as 0/1 but with double volume
 # - PCM4|PCM4_U: 0=low nibble first, 1=high nibble first
 # - others: ignored
@@ -237,7 +246,7 @@ Modifies the meaning of sample fields when set *before* them.
 
 Accepted values:
 - `samples`: exact sample (default)
-- `bytes`: automatically converts bytes/offset to samples (applies after */+- modifiers)
+- `bytes`: automatically converts bytes/offset to samples (applies after */+-& modifiers)
 - `blocks`: same as bytes, but value is given in blocks/frames
   * Value is internally converted from blocks to bytes first: `bytes = (value * interleave*channels)`
 
@@ -259,15 +268,16 @@ loop_end_sample     = (value)|data_size
 Force loop on or off, as loop start/end may be defined but not used. If not set, by default it loops when loop_end_sample is defined and less than num_samples.
 
 Special values:
-- auto: tries to autodetect loop points for PS-ADPCM data using data loop flags.
+- `auto`: tries to autodetect loop points for PS-ADPCM data using data loop flags.
 
 Sometimes games give loop flags different meaning, so behavior can be tweaked by defining `loop_behavior` before `loop_flag`:
 - `default`: values 0 or 0xFFFF/0xFFFFFFFF (-1) disable looping, but not 0xFF (loop endlessly)
 - `negative`: values 0xFF/0xFFFF/0xFFFFFFFF (-1) enable looping
 - `positive`: values 0xFF/0xFFFF/0xFFFFFFFF (-1) disable looping
+- `inverted`: values not 0 disable looping
 
 ```
-loop_negative = default|negative|positive
+loop_behavior = default|negative|positive|inverted
 loop_flag = (value)|auto
 ```
 
@@ -291,9 +301,9 @@ skip_samples = (value)
 #### DSP DECODING COEFFICIENTS [REQUIRED for DSP]
 DSP needs a "coefs" list to decode correctly. These are 8*2 16-bit values per channel, starting from `coef_offset`.
 
-Usually each channel uses its own list, so we can set the separation per channel, usually 0x20 (16 values * 2 bytes). So channel N coefs are read at `coef_offset + coef_spacing * N`
+Usually each channel uses its own list, so we may need to set separation per channel, usually 0x20 (16 values * 2 bytes). So channel N coefs are read at `coef_offset + coef_spacing * N`
 
-Those 16-bit coefs can be little or big endian (usually BE), set `coef_endianness` directly or in an offset value where ´0=LE, >0=BE´.
+Those 16-bit coefs can be little or big endian (usually BE), set `coef_endianness` directly or in an offset value where `0=LE, >0=BE`.
 
 While the coef table is almost always included per-file, some games have their coef table in the executable or precalculated somehow. You can set inline coefs instead of coef_offset. Format is a long string of bytes (optionally space-separated) like `coef_table = 0x1E02DE01 3C0C0EFA ...`. You still need to set `coef_spacing` and `coef_endianness` though.
 ```
@@ -301,6 +311,22 @@ coef_offset = (value)
 coef_spacing = (value)
 coef_endianness = BE|LE|(value)
 coef_table = (string)
+```
+
+#### ADPCM STATE
+Some ADPCM codecs need to set up their initial or "history" state, normally one or two 16-bit PCM samples per channel, starting from `hist_offset`.
+
+Usually each channel uses its own state, so we may need to set separation per channel.
+
+State values can be little or big endian (usually BE for DSP), set `hist_endianness` directly or in an offset value where ´0=LE, >0=BE´.
+
+Normally audio starts with silence or hist samples are set to zero and can be ignored, but it does affect a bit resulting output.
+
+Currently used by DSP.
+```
+hist_offset = (value)
+hist_spacing = (value)
+hist_endianness = BE|LE|(value)
 ```
 
 #### HEADER/BODY SETTINGS
@@ -389,12 +415,12 @@ Inside the table you define lines mapping a filename to a bunch of values, in th
 (filename1): (value)
 ...
 # may put multiple comma-separated values, spaces are ok
-(filenameN)    : (value1), (...)   ,   (valueN)
+(filenameN)    : (value1), (...)   ,   (valueN)  # inline comments too
 
 # put no name before the : to set default values
  : (value1), (...), (valueN)
 ```
-Then I'll find your current file name, and you can then reference its numbers from the list as a `name_value` field, like `base_offset = name_value`, `start_offset = 0x1000 + name_value1`, `interleave = name_value5`, etc. `(filename)` can be with or without extension (like `bgm01.vag` or just `bgm01`), and if the file's name isn't found it'll use default values, and if those aren't defined you'll get 0 instead. Being "values" they can be use math or offsets too.
+Then I'll find your current file name, and you can then reference its numbers from the list as a `name_value` field, like `base_offset = name_value`, `start_offset = 0x1000 + name_value1`, `interleave = name_value5`, etc. `(filename)` can be with or without extension (like `bgm01.vag` or just `bgm01`), and if the file's name isn't found it'll use default values, and if those aren't defined you'll get 0 instead. Being "values" they can use math or offsets too (`bgm05: 5*0x010`).
 
 You can use wildcards to match multiple names too (it stops on first name that matches), and UTF-8 names should work, case insensitive even.
 ```
@@ -403,11 +429,11 @@ bgm*_M: 1   # 1ch: some files end with _M for mono
 bgm*: 2     # 2ch: all other files, notice order matters
 ```
 
-While you can put anything in the numbers, this feature is meant to be used to store some number that points to the actual data inside a real multi-header, that could be set with `header_file`. If you need to store many constant values there is good chance this can be supported in some better way.
+While you can put anything in the values, this feature is meant to be used to store some number that points to the actual data inside a real multi-header, that could be set with `header_file`. If you feel the need to store many constant values per file, there is good chance it can be done in some better, simpler way.
 
 
 #### BASE OFFSET MODIFIER
-You can set a default offset that affects next `@(offset)` reads making them `@(offset + base_offset)`, for cleaner parsing (particularly interesting when combined with the `name_list).
+You can set a default offset that affects next `@(offset)` reads making them `@(offset + base_offset)`, for cleaner parsing (particularly interesting when combined with the `name_table`).
 
 For example instead of `channels = @0x714` you could set `base_offset = 0x710, channels = @0x04`. Set to 0 when you want to disable it.
 ```
@@ -501,13 +527,13 @@ sample_rate = 0x04      # sample rate is the same for all subsongs
 ```
 
 ### Math
-Sometimes header values are in "sectors" or similar concepts (typical in DVD games), and need to be adjusted to a real value.
+Sometimes header values are in "sectors" or similar concepts (typical in DVD games), and need to be adjusted to a real value using some complex math:
 ```
 sample_type   = bytes
 start_offset  = @0x10 * 0x800    # 0x15 * DVD sector size, for example
 ```
 
-You can also use certain fields' values:
+You can use `+-*/&` operators, and also certain fields' values:
 ```
 num_samples = @0x10 * channels  # byte-to-samples of channel_size
 ```
@@ -608,7 +634,7 @@ chunk_count = 26
 
 # after setting chunks (sizes vary when 'dechunking')
 start_offset = 0x00
-padding_size = auto-empty   
+padding_size = auto-empty
 num_samples = data_size
 ```
 
@@ -645,9 +671,22 @@ chunk_size      = 0x8000
 num_samples = data_size
 ```
 
+### Base offset chaining
+Some formats read an offset to another part of the file, then another offset, then other, etc.
+
+You can simulate this chaining multiple `base_offset`
+```
+base_offset = @0x10                 #sets current at 0x1000
+channels    = @0x04                 #reads at 0x1004 (base_offset + 0x04)
+base_offset = base_offset + @0x10   #sets current at 0x1000 + 0x200 = 0x1200
+sample_rate = @0x04                 #reads at 0x1204
+...
+```
+
+
 ## Examples
 
-**Colin McRae DiRT (PC) .wip.txth**
+#### Colin McRae DiRT (PC) .wip.txth
 ```
 id_value = 0x00000000   #check that value at 0x00 is really 0x00000000
 id_offset = @0x00:BE
@@ -661,7 +700,7 @@ loop_start_sample = 0
 loop_end_sample = data_size
 ```
 
-**Kim Possible: What's the Switch (PS2) .str.txth**
+#### Kim Possible: What's the Switch (PS2) .str.txth
 ```
 codec = PSX
 interleave = 0x2000
@@ -671,7 +710,7 @@ num_samples = data_size
 interleave_last = auto
 ```
 
-**Manhunt (Xbox) .rib.txth**
+#### Manhunt (Xbox) .rib.txth
 ```
 codec = XBOX
 codec_mode = 1 #interleaved XBOX
@@ -683,7 +722,7 @@ start_offset = 0x00
 num_samples = data_size
 ```
 
-**Pitfall The Lost Expedition (PC) .txth**
+#### Pitfall The Lost Expedition (PC) .txth
 ```
 codec = DVI_IMA
 interleave = 0x80
@@ -693,7 +732,7 @@ sample_rate = 44100
 num_samples = data_size
 ```
 
-**Spy Hunter (GC) .pcm.txth**
+#### Spy Hunter (GC) .pcm.txth
 ```
 codec = PCM8
 sample_rate = 32000
@@ -702,7 +741,7 @@ start_offset = 0
 num_samples = data_size
 ```
 
-**Ultimate Board Game Collection (Wii) .dsp.txth**
+#### Ultimate Board Game Collection (Wii) .dsp.txth
 ```
 codec = NGC_DSP
 interleave = 0x10000
@@ -721,7 +760,8 @@ coef_offset = 0x1c
 coef_spacing = 0x10000
 coef_endianness = BE
 ```
-**Aladdin in Nasira's Revenge (PS1) .cvs.txth**
+
+#### Aladdin in Nasira's Revenge (PS1) .cvs.txth
 ```
 codec = PSX
 interleave = 0x10
@@ -731,7 +771,7 @@ padding_size = auto-empty
 num_samples = data_size
 ```
 
-**Shikigami no Shiro - Nanayozuki Gensoukyoku (PS2) bgm.txth**
+#### Shikigami no Shiro - Nanayozuki Gensoukyoku (PS2) bgm.txth
 ```
 codec = PSX
 interleave = 0x1000
@@ -758,7 +798,7 @@ loop_end_sample   = @0x10 * channels
 data_size         = @0x08 * channels  #for bitrate
 ```
 
-**Dragon Poker (Mobile) .snd.txth**
+#### Dragon Poker (Mobile) .snd.txth
 ```
 # parse MP3 inside the .snd
 subfile_extension = mp3
@@ -773,7 +813,7 @@ loop_start_sample = 0
 loop_end_sample = data_size
 ```
 
-**Simple 2000 Series Vol. 120 - The Saigo no Nihonhei (PS2) .xag.txth**
+#### Simple 2000 Series Vol. 120 - The Saigo no Nihonhei (PS2) .xag.txth
 ```
 header_file = TSNDDRVC.IRX
 
@@ -805,4 +845,102 @@ BGM012.XAG: 0x108
 PAD.XAG   : 0x150
 JIN002.XAG: 0x168
 JIN003.XAG: 0x180
+```
+
+
+#### Grandia (PS1) bgm.txth
+```
+header_file       = GM1.IDX
+body_file         = GM1.STZ
+
+subsong_count     = 394  #last doesn't have size though
+subsong_offset    = 0x04
+
+subfile_offset    = (@0x00 & 0xFFFFF) * 0x800
+subfile_extension = seb
+subfile_size      = ((@0x04 - @0x00) & 0xFFFFF) * 0x800
+```
+
+#### Zack & Wiki (Wii) .ssd.txth
+```
+header_file = bgm_S01.srt
+name_table = .names.txt
+
+base_offset = @0x0c:BE
+base_offset = base_offset + @0x08:BE + name_value
+base_offset = base_offset + @0x00:BE - name_value
+
+codec = NGC_DSP
+channels = 2
+interleave = half_size
+sample_rate = @0x08:BE
+loop_flag = @0x04:BE
+
+sample_type = bytes
+loop_start_sample = @0x10:BE
+loop_end_sample = @0x14:BE
+num_samples = @0x18:BE
+
+coef_offset = 0x20
+coef_spacing = 0x40
+coef_endianness = BE
+```
+*.names.txt*
+```
+st_s01_00a.ssd: 0*0x04
+st_s01_00b.ssd: 1*0x04
+st_s01_00c.ssd: 2*0x04
+st_s01_01a.ssd: 3*0x04
+st_s01_01b.ssd: 4*0x04
+st_s01_02a.ssd: 5*0x04
+st_s01_02b.ssd: 6*0x04
+st_s01_02c.ssd: 7*0x04
+```
+
+
+#### Zack & Wiki (Wii) st_s01_00a.txth
+```
+#alt from above with untouched folders
+header_file = Sound/BGM/bgm_S01.srt
+body_file = snd/stream/st_s01_00a.ssd
+name_table = .names.txt
+
+base_offset = @0x0c:BE
+base_offset = base_offset + @0x08:BE + name_value
+base_offset = base_offset + @0x00:BE - name_value
+
+codec = NGC_DSP
+channels = 2
+interleave = half_size
+sample_rate = @0x08:BE
+loop_flag = @0x04:BE
+
+sample_type = bytes
+loop_start_sample = @0x10:BE
+loop_end_sample = @0x14:BE
+num_samples = @0x18:BE
+
+coef_offset = 0x20
+coef_spacing = 0x40
+coef_endianness = BE
+```
+*.names.txt*
+```
+*snd/stream/st_s01_00a.ssd: 0*0x04
+*snd/stream/st_s01_00b.ssd: 1*0x04
+*snd/stream/st_s01_00c.ssd: 2*0x04
+*snd/stream/st_s01_01a.ssd: 3*0x04
+*snd/stream/st_s01_01b.ssd: 4*0x04
+*snd/stream/st_s01_02a.ssd: 5*0x04
+*snd/stream/st_s01_02b.ssd: 6*0x04
+*snd/stream/st_s01_02c.ssd: 7*0x04
+# uses wildcards for full paths from plugins
+```
+
+####  Croc (SAT) .asf.txth
+```
+codec = ASF
+sample_rate = 22050
+channels = 2
+num_samples = data_size
 ```

@@ -379,22 +379,17 @@ static VGMSTREAM * init_vgmstream_ubi_bao_base(ubi_bao_header * bao, STREAMFILE 
             vgmstream->layout_type = layout_none;
             break;
         }
-
+#endif
+#ifdef VGM_USE_VORBIS
         case FMT_OGG: {
-            ffmpeg_codec_data *ffmpeg_data;
-
-            ffmpeg_data = init_ffmpeg_offset(streamData, start_offset, bao->stream_size);
-            if (!ffmpeg_data) goto fail;
-            vgmstream->codec_data = ffmpeg_data;
-            vgmstream->coding_type = coding_FFmpeg;
+            vgmstream->codec_data = init_ogg_vorbis(streamData, start_offset, bao->stream_size, NULL);
+            if (!vgmstream->codec_data) goto fail;
+            vgmstream->coding_type = coding_OGG_VORBIS;
             vgmstream->layout_type = layout_none;
 
-            vgmstream->num_samples = bao->num_samples; /* ffmpeg_data->totalSamples */
-            VGM_ASSERT(bao->num_samples != ffmpeg_data->totalSamples,
-                    "UBI BAO: header samples %i vs ffmpeg %i differ\n", bao->num_samples, (uint32_t)ffmpeg_data->totalSamples);
+            vgmstream->num_samples = bao->num_samples; /* same as Ogg samples */
             break;
         }
-
 #endif
         default:
             goto fail;
@@ -994,11 +989,9 @@ static int parse_type_layer(ubi_bao_header * bao, off_t offset, STREAMFILE* stre
         if (bao->sample_rate != sample_rate || bao->stream_type != stream_type) {
             VGM_LOG("UBI BAO: layer headers don't match at %x\n", (uint32_t)table_offset);
 
-            if (bao->cfg.layer_ignore_error) {
-                continue;
+            if (!bao->cfg.layer_ignore_error) {
+                goto fail;
             }
-
-            goto fail;
         }
 
         /* uncommonly channels may vary per layer [Rayman Raving Rabbids: TV Party (Wii) ex. 0x22000cbc.pk] */
@@ -1018,10 +1011,8 @@ fail:
 }
 
 static int parse_type_silence(ubi_bao_header * bao, off_t offset, STREAMFILE* streamFile) {
-    int32_t (*read_32bit)(off_t,STREAMFILE*) = bao->big_endian ? read_32bitBE : read_32bitLE;
+    float (*read_f32)(off_t,STREAMFILE*) = bao->big_endian ? read_f32be : read_f32le;
     off_t h_offset = offset + bao->header_skip;
-    uint32_t duration_int;
-    float* duration_float;
 
     /* silence header */
     bao->type = UBI_SILENCE;
@@ -1030,13 +1021,8 @@ static int parse_type_silence(ubi_bao_header * bao, off_t offset, STREAMFILE* st
         goto fail;
     }
 
-    {
-        duration_int = (uint32_t)read_32bit(h_offset + bao->cfg.silence_duration_float, streamFile);
-        duration_float = (float*)&duration_int;
-        bao->duration = *duration_float;
-    }
-
-    if (bao->duration <= 0) {
+    bao->duration = read_f32(h_offset + bao->cfg.silence_duration_float, streamFile);
+    if (bao->duration <= 0.0f) {
         VGM_LOG("UBI BAO: bad duration %f at %x\n", bao->duration, (uint32_t)offset);
         goto fail;
     }
@@ -1485,19 +1471,26 @@ static STREAMFILE * setup_bao_streamfile(ubi_bao_header *bao, STREAMFILE *stream
             if (!new_streamFile) goto fail;
             stream_segments[0] = new_streamFile;
 
-            new_streamFile = open_atomic_bao(bao->cfg.file_type, bao->stream_id, 1, streamFile);
-            if (!new_streamFile) goto fail;
-            stream_segments[1] = new_streamFile;
+            if (bao->stream_size - bao->prefetch_size != 0) {
+                new_streamFile = open_atomic_bao(bao->cfg.file_type, bao->stream_id, 1, streamFile);
+                if (!new_streamFile) goto fail;
+                stream_segments[1] = new_streamFile;
 
-            new_streamFile = open_clamp_streamfile(stream_segments[1], bao->stream_offset, (bao->stream_size - bao->prefetch_size));
-            if (!new_streamFile) goto fail;
-            stream_segments[1] = new_streamFile;
+                new_streamFile = open_clamp_streamfile(stream_segments[1], bao->stream_offset, (bao->stream_size - bao->prefetch_size));
+                if (!new_streamFile) goto fail;
+                stream_segments[1] = new_streamFile;
 
-            new_streamFile = open_multifile_streamfile(stream_segments, 2);
-            if (!new_streamFile) goto fail;
-            temp_streamFile = new_streamFile;
-            stream_segments[0] = NULL;
-            stream_segments[1] = NULL;
+                new_streamFile = open_multifile_streamfile(stream_segments, 2);
+                if (!new_streamFile) goto fail;
+                temp_streamFile = new_streamFile;
+                stream_segments[0] = NULL;
+                stream_segments[1] = NULL;
+            }
+            else {
+                /* weird but happens, streamed chunk is empty in this case */
+                temp_streamFile = new_streamFile;
+                stream_segments[0] = NULL;
+            }
         }
         else {
             new_streamFile = open_atomic_bao(bao->cfg.file_type, bao->stream_id, bao->is_external, streamFile);
@@ -1519,20 +1512,27 @@ static STREAMFILE * setup_bao_streamfile(ubi_bao_header *bao, STREAMFILE *stream
             if (!new_streamFile) goto fail;
             stream_segments[0] = new_streamFile;
 
-            new_streamFile = open_streamfile_by_filename(streamFile, bao->resource_name);
-            if (!new_streamFile) { VGM_LOG("UBI BAO: external stream '%s' not found\n", bao->resource_name); goto fail; }
-            stream_segments[1] = new_streamFile;
+            if (bao->stream_size - bao->prefetch_size != 0) {
+                new_streamFile = open_streamfile_by_filename(streamFile, bao->resource_name);
+                if (!new_streamFile) { VGM_LOG("UBI BAO: external stream '%s' not found\n", bao->resource_name); goto fail; }
+                stream_segments[1] = new_streamFile;
 
-            new_streamFile = open_clamp_streamfile(stream_segments[1], bao->stream_offset, (bao->stream_size - bao->prefetch_size));
-            if (!new_streamFile) goto fail;
-            stream_segments[1] = new_streamFile;
-            temp_streamFile = NULL;
+                new_streamFile = open_clamp_streamfile(stream_segments[1], bao->stream_offset, (bao->stream_size - bao->prefetch_size));
+                if (!new_streamFile) goto fail;
+                stream_segments[1] = new_streamFile;
+                temp_streamFile = NULL;
 
-            new_streamFile = open_multifile_streamfile(stream_segments, 2);
-            if (!new_streamFile) goto fail;
-            temp_streamFile = new_streamFile;
-            stream_segments[0] = NULL;
-            stream_segments[1] = NULL;
+                new_streamFile = open_multifile_streamfile(stream_segments, 2);
+                if (!new_streamFile) goto fail;
+                temp_streamFile = new_streamFile;
+                stream_segments[0] = NULL;
+                stream_segments[1] = NULL;
+            }
+            else {
+                /* weird but happens, streamed chunk is empty in this case */
+                temp_streamFile = new_streamFile;
+                stream_segments[0] = NULL;
+            }
         }
         else if (bao->is_external) {
             new_streamFile = open_streamfile_by_filename(streamFile, bao->resource_name);
@@ -1733,6 +1733,7 @@ static int config_bao_version(ubi_bao_header * bao, STREAMFILE *streamFile) {
         case 0x001F0008: /* Rayman Raving Rabbids: TV Party (Wii)-package */
         case 0x001F0010: /* Prince of Persia 2008 (PC/PS3/X360)-atomic-forge, Far Cry 2 (PS3)-atomic-dunia? */
         case 0x001F0011: /* Naruto: The Broken Bond (X360)-package */
+        case 0x0021000C: /* Splinter Cell: Conviction (E3 2009 Demo)(X360)-package */
         case 0x0022000D: /* Just Dance (Wii)-package */
         case 0x0022001B: /* Prince of Persia: The Forgotten Sands (Wii)-package */
             config_bao_entry(bao, 0xA4, 0x28); /* PC/Wii: 0xA8 */
