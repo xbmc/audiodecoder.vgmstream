@@ -18,6 +18,14 @@ msgstr ""
 "Plural-Forms: nplurals=4; plural=(n == 1) ? 0 : ((n == 2) ? 1 : ((n > 10 && "
 "n % 10 == 0) ? 2 : 3));\n"
 
+msgctxt "Addon Summary"
+msgid "VGM Audio Decoder"
+msgstr ""
+
+msgctxt "Addon Description"
+msgid "Video Game Music (VGM) Audio Decoder is a library for playing a wide variety of audio formats used in video games."
+msgstr ""
+
 #[Consistency] Make terms, settings names, brands and other minutiae, consistent throughout file.
 #[Capitalization] Avoid capitalizing every second word. See http://grammarist.com/capitalization/
 #For example, prefer wording as "This new string" instead of "This New String".
