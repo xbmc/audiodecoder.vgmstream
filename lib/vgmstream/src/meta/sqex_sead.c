@@ -172,7 +172,7 @@ VGMSTREAM* init_vgmstream_sqex_sead(STREAMFILE* sf) {
             /* 0x18: reserved x2 */
             /* 0x20: seek table */
 
-            ogg_vgmstream = init_vgmstream_ogg_vorbis_callbacks(sf, NULL, subfile_offset, &ovmi);
+            ogg_vgmstream = init_vgmstream_ogg_vorbis_config(sf, subfile_offset, &ovmi);
             if (ogg_vgmstream) {
                 ogg_vgmstream->num_streams = vgmstream->num_streams;
                 ogg_vgmstream->stream_size = vgmstream->stream_size;
@@ -230,7 +230,6 @@ VGMSTREAM* init_vgmstream_sqex_sead(STREAMFILE* sf) {
 
 #ifdef VGM_USE_MPEG
         case 0x06: { /* MSMP3 (MSF subfile) [Dragon Quest Builders (PS3)] */
-            mpeg_codec_data *mpeg_data = NULL;
             mpeg_custom_config cfg = {0};
 
             start_offset = sead.extradata_offset + sead.extradata_size;
@@ -238,12 +237,11 @@ VGMSTREAM* init_vgmstream_sqex_sead(STREAMFILE* sf) {
             /* extradata: */
             /* proper MSF header, but sample rate/loops are ignored in favor of SAB's */
 
-            mpeg_data = init_mpeg_custom(sf, start_offset, &vgmstream->coding_type, vgmstream->channels, MPEG_STANDARD, &cfg);
-            if (!mpeg_data) goto fail;
-            vgmstream->codec_data = mpeg_data;
+            vgmstream->codec_data = init_mpeg_custom(sf, start_offset, &vgmstream->coding_type, vgmstream->channels, MPEG_STANDARD, &cfg);
+            if (!vgmstream->codec_data) goto fail;
             vgmstream->layout_type = layout_none;
 
-            vgmstream->num_samples = mpeg_bytes_to_samples(sead.stream_size, mpeg_data);
+            vgmstream->num_samples = mpeg_bytes_to_samples(sead.stream_size, vgmstream->codec_data);
             vgmstream->loop_start_sample = sead.loop_start;
             vgmstream->loop_end_sample = sead.loop_end;
             break;
@@ -767,7 +765,7 @@ static void parse_sead_sab_name(sead_header *sead, STREAMFILE *sf) {
 }
 
 
-static int parse_sead(sead_header *sead, STREAMFILE *sf) {
+static int parse_sead(sead_header* sead, STREAMFILE* sf) {
     uint32_t (*read_u32)(off_t,STREAMFILE*) = sead->big_endian ? read_u32be : read_u32le;
     uint16_t (*read_u16)(off_t,STREAMFILE*) = sead->big_endian ? read_u16be : read_u16le;
 
@@ -858,8 +856,10 @@ static int parse_sead(sead_header *sead, STREAMFILE *sf) {
         }
 
         /* SAB can contain 0 entries too */
-        if (sead->mtrl_offset == 0)
+        if (sead->mtrl_offset == 0) {
+            vgm_logi("SQEX SEAD: bank has no subsongs (ignore)\n");
             goto fail;
+        }
     }
 
     /** stream header **/

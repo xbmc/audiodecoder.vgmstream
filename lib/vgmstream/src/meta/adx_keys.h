@@ -3,8 +3,8 @@
 
 
 typedef struct {
-    uint16_t start,mult,add;    /* XOR values derived from the actual key */
-    char* key8;                 /* keystring used by type 8 encryption */
+    uint16_t start, mult, add;  /* XOR values derived from the actual key */
+    const char* key8;           /* keystring used by type 8 encryption */
     uint64_t key9;              /* keycode used by type 9 encryption */
 } adxkey_info;
 
@@ -20,7 +20,7 @@ static const adxkey_info adxkey8_list[] = {
         {0x49e1,0x4a57,0x553d, "karaage",0},
 
         /* Blood+ (PS2) [Grasshopper Manufacture] */
-        {0x5f5d,0x58bd,0x55ed, NULL,0},     // keystring not in ELF?
+        {0x5f5d,0x58bd,0x55ed, "LOVELOVE",0}, // obfuscated keystring is "KNUDKNUD", adds +1 to chars to get final key
 
         /* Killer7 (PS2) [Grasshopper Manufacture] */
         {0x50fb,0x5803,0x5701, "GHM",0},
@@ -34,14 +34,14 @@ static const adxkey_info adxkey8_list[] = {
         /* Phantasy Star Universe (PC), Phantasy Star Universe: Ambition of the Illuminus (PS2) [Sonic Team] */
         {0x5deb,0x5f27,0x673f, "3x5k62bg9ptbwy",0},
 
-        /* Senko no Ronde [G.rev] */
+        /* Senko no Ronde Rev.X (X360) [G.rev] */
         {0x46d3,0x5ced,0x474d, "ranatus",0},
 
         /* NiGHTS: Journey of Dreams (Wii) [Sonic Team] */
         {0x440b,0x6539,0x5723, "sakakit4649",0},
 
-        /* unknown source */
-        {0x586d,0x5d65,0x63eb, NULL,0},     // from guessadx (unique?)
+        /* The iDOLM@STER: Live For You (X360) [Bandai Namco] (.aix) */
+        {0x586d,0x5d65,0x63eb, "75_501NO_003B",0},
 
         /* Shuffle! On the Stage (PS2) [Navel] */
         {0x4969,0x5deb,0x467f, "SHUF",0},
@@ -64,17 +64,17 @@ static const adxkey_info adxkey8_list[] = {
         /* Soulcalibur IV (PS3) [Namco] */
         {0x59ed,0x4679,0x46c9, "SC4Test",0},
 
-        /* Senko no Ronde DUO (X360) [G.rev] */
-        {0x6157,0x6809,0x4045, NULL,0},     // from guessadx
+        /* Senko no Ronde DUO (X360/AC) [G.rev] */
+        {0x6157,0x6809,0x4045, "yomesokushitsu",0},
 
         /* Nogizaka Haruka no Himitsu: Cosplay Hajimemashita (PS2) [Vridge] */
         {0x45af,0x5f27,0x52b1, "SKFHSIA",0},
 
-        /* Little Anchor (PS2) [D3 Publisher] */
-        {0x5f65,0x5b3d,0x5f65, NULL,0},     // confirmed unique with guessadx
+        /* Little Anchor (PS2) [Vridge] */
+        {0x5f65,0x5b3d,0x5f65, "KHNUJYTG",0},
 
         /* Hanayoi Romanesque: Ai to Kanashimi (PS2) [Marvelous] */
-        {0x5563,0x5047,0x43ed, NULL,0},     // 2nd from guessadx, other was {0x5562,0x5047,0x1433}
+        {0x5563,0x5047,0x43ed, "HANAOTM",0},
 
         /* Mobile Suit Gundam: Gundam vs. Gundam NEXT PLUS (PSP) [Capcom] */
         {0x4f7b,0x4fdb,0x5cbf, "CS-GGNX+",0},
@@ -83,10 +83,10 @@ static const adxkey_info adxkey8_list[] = {
         {0x4f7b,0x5071,0x4c61, "ELEMENGAL",0},
 
         /* Rakushou! Pachi-Slot Sengen 6: Rio 2 Cruising Vanadis (PS2) [Net Corporation] */
-        {0x53e9,0x586d,0x4eaf, NULL,0},     // confirmed unique with guessadx
+        {0x53e9,0x586d,0x4eaf, "waksde",0},
 
-        /* Tears to Tiara Gaiden Avalon no Nazo (PS3) [Aquaplus] */
-        {0x47e1,0x60e9,0x51c1, NULL,0},     // confirmed unique with guessadx
+        /* Tears to Tiara Gaiden: Avalon no Nazo (PS3) [Aquaplus] */
+        {0x47e1,0x60e9,0x51c1, "Hello TtT world!",0}, // obfuscated keystring xors 0xF0 to chars to get final key
 
         /* Neon Genesis Evangelion: Koutetsu no Girlfriend 2nd (PS2) [Broccoli] */
         {0x481d,0x4f25,0x5243, "eva2",0},
@@ -100,26 +100,26 @@ static const adxkey_info adxkey8_list[] = {
         /* Soshite Kono Uchuu ni Kirameku Kimi no Shi XXX (PS2) [Datam Polystar] */
         {0x5f5d,0x552b,0x5507, "DATAM-KK2",0},
 
-        /* Sakura Taisen: Atsuki Chishio Ni (PS2) [Sega] */
-        {0x645d,0x6011,0x5c29, NULL,0},     // confirmed unique with guessadx
+        /* Sakura Taisen: Atsuki Chishio ni (PS2) [Sega] */
+        {0x645d,0x6011,0x5c29, NULL,0}, // keystring may be printf'd "%08X" + number (unlikely key: "[Seq][ADX] illegal cri or libsd status.")
 
-        /* Sakura Taisen 3 ~Paris wa Moeteiru ka~ (PS2) [Sega] */
-        {0x62ad,0x4b13,0x5957, NULL,0},     // confirmed unique with guessadx
+        /* Sakura Taisen Monogatari: Mysterious Paris (PS2) [Sega] */
+        {0x62ad,0x4b13,0x5957, "inoue4126",0},
 
         /* Sotsugyou 2nd Generation (PS2) [Jinx] */
-        {0x6305,0x509f,0x4c01, NULL,0},     // First guess from guessadx, other was {0x6307,0x509f,0x2ac5}
+        {0x6305,0x509f,0x4c01, "MUSUMEG",0},
 
-        /* La Corda d'Oro (PSP) [Koei] */
-        {0x55b7,0x67e5,0x5387, NULL,0},     // keystring not in ELF?
+        /* Kin'iro no Corda -La Corda d'Oro- (PSP) [Koei] */
+        {0x55b7,0x67e5,0x5387, "neo3corda",0}, // keystring as code, char by char
 
         /* Nanatsuiro * Drops Pure!! (PS2) [Media Works] */
-        {0x6731,0x645d,0x566b, NULL,0},     // confirmed unique with guessadx
+        {0x6731,0x645d,0x566b, "NANAT",0},
 
         /* Shakugan no Shana (PS2) [Vridge] */
         {0x5fc5,0x63d9,0x599f, "FUZETSU",0},
 
         /* Uragiri wa Boku no Namae o Shitteiru (PS2) [Kadokawa Shoten] */
-        {0x4c73,0x4d8d,0x5827, NULL,0},     // confirmed unique with guessadx
+        {0x4c73,0x4d8d,0x5827, "URABOKU-penguin",0},
 
         /* StormLover!! (PSP), StormLover Kai!! (PSP) [Vridge] */
         {0x5a11,0x67e5,0x6751, "HEXDPFMDKPQW",0}, /* unknown AHX key */
@@ -127,7 +127,7 @@ static const adxkey_info adxkey8_list[] = {
         /* Sora no Otoshimono: DokiDoki Summer Vacation (PSP) [Kadokawa Shoten] */
         {0x5e75,0x4a89,0x4c61, "funen-gomi",0},
 
-        /* Boku wa Koukuu Kanseikan: Airport Hero Naha (PSP) [Sonic Powered] */
+        /* Boku wa Koukuu Kanseikan: Airport Hero Naha/Narita/Shinchitose/Haneda/Kankuu (PSP) [Sonic Powered] */
         {0x64ab,0x5297,0x632f, "sonic",0},
 
         /* Lucky Star: Net Idol Meister (PSP) [Vridge, Kadokawa Shoten] */
@@ -196,6 +196,9 @@ static const adxkey_info adxkey8_list[] = {
         /* 428: Fuusasareta Shibuya de (PS3) */
         {0x52ff,0x649f,0x448f, "hj1kviaqqdzUacryoacwmscfvwtlfkVbbbqpqmzqnbile2euljywazejgyxxvqlf",0},
 
+        /* Mirai Nikki: 13-ninme no Nikki Shoyuusha Re-Write (PSP) */
+        {0x58a3,0x66f5,0x599f, "FDRW17th",0},
+
 };
 
 static const adxkey_info adxkey9_list[] = {
@@ -237,8 +240,20 @@ static const adxkey_info adxkey9_list[] = {
         /* Detective Conan Runner / Case Closed Runner (Android) */
         {0x0613,0x0e3d,0x6dff, NULL,1175268187653273344},   // 104f643098e3f700
 
-        /* Persona 5 Royal (PS4) */
+        /* Persona 5 Royal (PS4) (asia?) **verified */
         {0x0000,0x1c85,0x7043, NULL,29915170},              // 0000000001C87822
+
+        /* Persona 5 Royal (PS4) (japan?) **not verified */
+        {0x0000,0x0000,0x0000, NULL,10882899},              // 0000000000A60F53
+
+        /* Persona 5 Royal (PS4) (us/eu?) **not verified */
+        {0x0000,0x0000,0x0000, NULL,22759300},              // 00000000015B4784
+
+        /* Assault Lily Last Bullet (Android) */
+        {0x0000,0x0000,0x0000, NULL,6349046567469313},      // 00168E6C99510101 (+ AWB subkeys)
+
+        /* maimai DX Splash (AC) */
+        {0x0000,0x0000,0x0000, NULL,9170825592834449000},   // 7F4551499DF55E68
 
 };
 
@@ -246,7 +261,7 @@ static const int adxkey8_list_count = sizeof(adxkey8_list) / sizeof(adxkey8_list
 static const int adxkey9_list_count = sizeof(adxkey9_list) / sizeof(adxkey9_list[0]);
 
 
-/* preloaded list used to derive keystrings from ADX_Decoder (see VGAudio for how to calculate) */
+/* preloaded list used to derive keystrings from ADX_Decoder, found in executables (see VGAudio for how to calculate) */
 static const uint16_t key8_primes[0x400] = {
     0x401B,0x4021,0x4025,0x402B,0x4031,0x403F,0x4043,0x4045,0x405D,0x4061,0x4067,0x406D,0x4087,0x4091,0x40A3,0x40A9,
     0x40B1,0x40B7,0x40BD,0x40DB,0x40DF,0x40EB,0x40F7,0x40F9,0x4109,0x410B,0x4111,0x4115,0x4121,0x4133,0x4135,0x413B,
@@ -314,13 +329,15 @@ static const uint16_t key8_primes[0x400] = {
     0x6779,0x6781,0x6785,0x6791,0x67AB,0x67BD,0x67C1,0x67CD,0x67DF,0x67E5,0x6803,0x6809,0x6811,0x6817,0x682D,0x6839,
 };
 
-static void derive_adx_key8(const char * key8, uint16_t * out_start, uint16_t * out_mult, uint16_t * out_add) {
+static void derive_adx_key8(const char* key8, uint16_t* p_start, uint16_t* p_mult, uint16_t* p_add) {
     size_t key_size;
     uint16_t start = 0, mult = 0, add = 0;
     int i;
 
-    if (key8 == NULL || key8[0] == '\0')
+    if (key8 == NULL || key8[0] == '\0') /* strlen >= 1 */
         goto end;
+
+    /* calcs as found in exes, though there is some unrolling in the original code */
     key_size = strlen(key8);
     start = key8_primes[0x100];
     mult  = key8_primes[0x200];
@@ -334,9 +351,9 @@ static void derive_adx_key8(const char * key8, uint16_t * out_start, uint16_t * 
     }
 
 end:
-    *out_start = start;
-    *out_mult  = mult;
-    *out_add   = add;
+    *p_start = start;
+    *p_mult  = mult;
+    *p_add   = add;
 }
 
 

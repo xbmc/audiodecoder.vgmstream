@@ -32,6 +32,8 @@ REM # -p: performance test new (decode with new exe and no comparison done)
 REM # -P: performance test new (same but also don't write file)
 REM # -po: performance test old (decode with new old and no comparison done)
 REM # -Po: performance test old (same but also don't write file)
+REM # -Pm: performance test new (only parse meta)
+REM # -Pmo: performance test old (only parse meta)
 set OP_PERFORMANCE=
 REM # -fc <exe>: file comparer (Windows's FC is slow)
 set OP_CMD_FC=fc /a /b
@@ -50,6 +52,8 @@ if "%~1"=="-p"  set OP_PERFORMANCE=1
 if "%~1"=="-P"  set OP_PERFORMANCE=2
 if "%~1"=="-po" set OP_PERFORMANCE=3
 if "%~1"=="-Po" set OP_PERFORMANCE=4
+if "%~1"=="-Pm"  set OP_PERFORMANCE=5
+if "%~1"=="-Pmo" set OP_PERFORMANCE=6
 if "%~1"=="-fc" set OP_CMD_FC=%2
 shift
 goto set_options
@@ -60,14 +64,20 @@ set C_W=0e
 set C_E=0c
 set C_O=0f
 
+REM # remove command options and possibly "
+for /f "tokens=1-1 delims= "    %%A in ("%OP_CMD_OLD%") do set CHECK_OLD=%%A
+for /f "tokens=1-1 delims= "    %%A in ("%OP_CMD_NEW%") do set CHECK_NEW=%%A
+set CHECK_OLD=%CHECK_OLD:"=%
+set CHECK_NEW=%CHECK_NEW:"=%
 
 REM # check exe
-set CMD_CHECK=where "%OP_CMD_OLD%" "%OP_CMD_NEW%"
+set CMD_CHECK=where "%CHECK_OLD%" "%CHECK_NEW%"
 %CMD_CHECK% > nul
 if %ERRORLEVEL% NEQ 0 (
     echo Old/new exe not found
     goto error
 )
+
 if %OP_SEARCH%=="" (
     echo Search wildcard not specified
     goto error
@@ -194,7 +204,7 @@ REM :process_file end, continue from last call
 REM # ########################################################################
 REM # decode only (no comparisons done), for performance testing
 REM # ########################################################################
-:performance_file
+:performance_file outer
     REM # ignore files starting with dot (no filename)
     set CMD_SHORTNAME=%~n1
     if "%CMD_SHORTNAME%" == "" goto performance_file_continue
@@ -217,8 +227,16 @@ REM # ########################################################################
     if "%OP_PERFORMANCE%" == "4" (
         set CMD_VGM="%OP_CMD_OLD%" -O "%CMD_FILE%"
     )
+    if "%OP_PERFORMANCE%" == "5" (
+        set CMD_VGM="%OP_CMD_NEW%" -m "%CMD_FILE%"
+    )
+    if "%OP_PERFORMANCE%" == "6" (
+        set CMD_VGM="%OP_CMD_OLD%" -m "%CMD_FILE%"
+    )
 
     %CMD_VGM% 1> nul 2>&1  & REM || goto error
+    set CMP_WAV_ERROR=0
+    if %ERRORLEVEL% NEQ 0  set CMP_WAV_ERROR=1
 
     call :echo_color %C_O% "%CMD_FILE%" "done"
 

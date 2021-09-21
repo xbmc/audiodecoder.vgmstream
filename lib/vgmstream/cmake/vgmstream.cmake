@@ -17,12 +17,16 @@ macro(setup_target TARGET)
 	target_include_directories(${TARGET} PRIVATE ${VGM_SOURCE_DIR}/src)
 	target_include_directories(${TARGET} PRIVATE ${VGM_SOURCE_DIR}/ext_includes)
 	# Set up position-independent code for all targets
-	set_target_properties(${TARGET} PROPERTIES
-		POSITION_INDEPENDENT_CODE TRUE)
+	set_target_properties(${TARGET} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+	if(BUILD_STATIC)
+		set_target_properties(${TARGET} PROPERTIES LINK_SEARCH_END_STATIC 1)
+	endif()
 	if(NOT WIN32 AND LINK)
 		# Include libm on non-Windows systems
 		target_link_libraries(${TARGET} m)
 	endif()
+
+	target_compile_definitions(${TARGET} PRIVATE VGM_LOG_OUTPUT)
 
 	if(USE_MPEG)
 		target_compile_definitions(${TARGET} PRIVATE VGM_USE_MPEG)
@@ -34,7 +38,7 @@ macro(setup_target TARGET)
 		else()
 			target_include_directories(${TARGET} PRIVATE ${MPG123_INCLUDE_DIR})
 			if(LINK)
-				target_link_libraries(${TARGET} ${MPG123_LIBRARIES})
+				target_link_libraries(${TARGET} mpg123)
 			endif()
 		endif()
 	endif()
@@ -49,14 +53,15 @@ macro(setup_target TARGET)
 		else()
 			target_include_directories(${TARGET} PRIVATE ${VORBISFILE_INCLUDE_DIRS})
 			if(LINK)
-				target_link_libraries(${TARGET} Vorbis::VorbisFile)
+				target_link_libraries(${TARGET} vorbisfile vorbis ogg m)
 			endif()
 		endif()
 	endif()
 
 	if(USE_FFMPEG)
 		target_compile_definitions(${TARGET} PRIVATE VGM_USE_FFMPEG)
-		if(WIN32)
+		if(WIN32 AND NOT FFMPEG_LIBRARIES)
+			target_include_directories(${TARGET} PRIVATE ${VGM_SOURCE_DIR}/ext_includes/ffmpeg)
 			if(LINK)
 				add_dependencies(${TARGET} ffmpeg)
 				target_link_libraries(${TARGET}
@@ -67,7 +72,11 @@ macro(setup_target TARGET)
 		else()
 			target_include_directories(${TARGET} PRIVATE ${FFMPEG_INCLUDE_DIRS})
 			if(LINK)
-				target_link_libraries(${TARGET} ${FFMPEG_LIBRARIES})
+				if(BUILD_STATIC)
+					target_link_libraries(${TARGET} avformat avcodec avutil swresample opus pthread m z)
+				else()
+					target_link_libraries(${TARGET} ${FFMPEG_LIBRARIES})
+				endif()
 			endif()
 		endif()
 	endif()
@@ -78,9 +87,12 @@ macro(setup_target TARGET)
 
 	if(USE_G719)
 		target_compile_definitions(${TARGET} PRIVATE VGM_USE_G719)
-		if(LINK)
+		if(WIN32 AND LINK)
 			add_dependencies(${TARGET} libg719_decode)
 			target_link_libraries(${TARGET} ${VGM_BINARY_DIR}/ext_libs/libg719_decode.lib)
+		endif()
+		if(NOT WIN32 AND LINK)
+			target_link_libraries(${TARGET} g719_decode)
 		endif()
 	endif()
 
@@ -94,9 +106,12 @@ macro(setup_target TARGET)
 
 	if(USE_ATRAC9)
 		target_compile_definitions(${TARGET} PRIVATE VGM_USE_ATRAC9)
-		if(LINK)
+		if(WIN32 AND LINK)
 			add_dependencies(${TARGET} libatrac9)
 			target_link_libraries(${TARGET} ${VGM_BINARY_DIR}/ext_libs/libatrac9.lib)
+		endif()
+		if(NOT WIN32 AND LINK)
+			target_link_libraries(${TARGET} atrac9)
 		endif()
 	endif()
 
@@ -109,6 +124,17 @@ macro(setup_target TARGET)
 				${VGM_BINARY_DIR}/ext_libs/libcelt-0110.lib)
 		endif()
 	endif()
+
+    if(USE_SPEEX)
+        target_compile_definitions(${TARGET} PRIVATE VGM_USE_SPEEX)
+        if(WIN32 AND LINK)
+            add_dependencies(${TARGET} libspeex)
+            target_link_libraries(${TARGET} ${VGM_BINARY_DIR}/ext_libs/libspeex/libspeex.lib)
+        endif()
+		if(NOT WIN32 AND LINK)
+			target_link_libraries(${TARGET} speex m)
+		endif()
+    endif()
 endmacro()
 
 # Installs the DLLs to the given install prefix
@@ -126,6 +152,7 @@ macro(install_dlls INSTALL_PREFIX)
 	set(CELT_DLL
 		${VGM_SOURCE_DIR}/ext_libs/libcelt-0061.dll
 		${VGM_SOURCE_DIR}/ext_libs/libcelt-0110.dll)
+    set(SPEEX_DLL ${VGM_SOURCE_DIR}/ext_libs/libspeex/libspeex.dll)
 
 	# List of DLLs to check for install
 	set(DLLS
@@ -135,7 +162,8 @@ macro(install_dlls INSTALL_PREFIX)
 		G719
 		FFMPEG
 		ATRAC9
-		CELT)
+		CELT
+		SPEEX)
 
 	# Loop over DLLs and only install if the USE_* is set for that DLL
 	foreach(DLL ${DLLS})

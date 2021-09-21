@@ -1,5 +1,7 @@
 file(GLOB WINAMP_SDK_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/sdk/*.h")
 set(RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resource.rc)
+file(GLOB WINAMP_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+file(GLOB WINAMP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 
 # Setup source groups, mainly for Visual Studio
 source_group("Header Files\\sdk" FILES ${WINAMP_SDK_HEADERS})
@@ -7,8 +9,8 @@ source_group("Resource Files" FILES ${RESOURCES})
 
 add_library(in_vgmstream SHARED
 	${WINAMP_SDK_HEADERS}
-	resource.h
-	in_vgmstream.c
+    ${WINAMP_HEADERS}
+    ${WINAMP_SOURCES}
 	${RESOURCES})
 
 # Link to the vgmstream library
@@ -36,7 +38,7 @@ if(MSVC)
 	add_dependencies(in_vgmstream version_h)
 elseif(MINGW)
 	if(VGMSTREAM_VERSION)
-		target_compile_definitions(in_vgmstream PRIVATE VERSION="${VGMSTREAM_VERSION}")
+		target_compile_definitions(in_vgmstream PRIVATE VGMSTREAM_VERSION="${VGMSTREAM_VERSION}")
 	endif()
 
 	# Also, on MinGW when using GCC, these flags need to be included to prevent requiring MinGW's runtime DLLs from being included, which does unfortunately increase the size of the DLL

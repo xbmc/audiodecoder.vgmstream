@@ -433,8 +433,8 @@ STREAMFILE* open_wrap_streamfile(STREAMFILE *streamfile) {
 
     return &this_sf->sf;
 }
-STREAMFILE* open_wrap_streamfile_f(STREAMFILE *streamfile) {
-    STREAMFILE *new_sf = open_wrap_streamfile(streamfile);
+STREAMFILE* open_wrap_streamfile_f(STREAMFILE* streamfile) {
+    STREAMFILE* new_sf = open_wrap_streamfile(streamfile);
     if (!new_sf)
         close_streamfile(streamfile);
     return new_sf;
@@ -445,28 +445,36 @@ STREAMFILE* open_wrap_streamfile_f(STREAMFILE *streamfile) {
 typedef struct {
     STREAMFILE sf;
 
-    STREAMFILE *inner_sf;
+    STREAMFILE* inner_sf;
     off_t start;
     size_t size;
 } CLAMP_STREAMFILE;
 
-static size_t clamp_read(CLAMP_STREAMFILE *streamfile, uint8_t *dst, off_t offset, size_t length) {
+static size_t clamp_read(CLAMP_STREAMFILE* streamfile, uint8_t* dst, off_t offset, size_t length) {
     off_t inner_offset = streamfile->start + offset;
-    size_t clamp_length = length > (streamfile->size - offset) ? (streamfile->size - offset) : length;
+    size_t clamp_length = length;
+
+    if (offset + length > streamfile->size) {
+        if (offset >= streamfile->size)
+            clamp_length = 0;
+        else
+            clamp_length = streamfile->size - offset;
+    }
+
     return streamfile->inner_sf->read(streamfile->inner_sf, dst, inner_offset, clamp_length);
 }
-static size_t clamp_get_size(CLAMP_STREAMFILE *streamfile) {
+static size_t clamp_get_size(CLAMP_STREAMFILE* streamfile) {
     return streamfile->size;
 }
-static off_t clamp_get_offset(CLAMP_STREAMFILE *streamfile) {
+static off_t clamp_get_offset(CLAMP_STREAMFILE* streamfile) {
     return streamfile->inner_sf->get_offset(streamfile->inner_sf) - streamfile->start;
 }
-static void clamp_get_name(CLAMP_STREAMFILE *streamfile, char *buffer, size_t length) {
+static void clamp_get_name(CLAMP_STREAMFILE* streamfile, char* buffer, size_t length) {
     streamfile->inner_sf->get_name(streamfile->inner_sf, buffer, length); /* default */
 }
-static STREAMFILE *clamp_open(CLAMP_STREAMFILE *streamfile, const char * const filename, size_t buffersize) {
+static STREAMFILE* clamp_open(CLAMP_STREAMFILE* streamfile, const char* const filename, size_t buffersize) {
     char original_filename[PATH_LIMIT];
-    STREAMFILE *new_inner_sf = NULL;
+    STREAMFILE* new_inner_sf = NULL;
 
     new_inner_sf = streamfile->inner_sf->open(streamfile->inner_sf,filename,buffersize);
     streamfile->inner_sf->get_name(streamfile->inner_sf, original_filename, PATH_LIMIT);
@@ -478,13 +486,13 @@ static STREAMFILE *clamp_open(CLAMP_STREAMFILE *streamfile, const char * const f
         return new_inner_sf;
     }
 }
-static void clamp_close(CLAMP_STREAMFILE *streamfile) {
+static void clamp_close(CLAMP_STREAMFILE* streamfile) {
     streamfile->inner_sf->close(streamfile->inner_sf);
     free(streamfile);
 }
 
-STREAMFILE* open_clamp_streamfile(STREAMFILE *streamfile, off_t start, size_t size) {
-    CLAMP_STREAMFILE *this_sf = NULL;
+STREAMFILE* open_clamp_streamfile(STREAMFILE* streamfile, off_t start, size_t size) {
+    CLAMP_STREAMFILE* this_sf = NULL;
 
     if (!streamfile || size == 0) return NULL;
     if (start + size > get_streamfile_size(streamfile)) return NULL;
@@ -507,8 +515,8 @@ STREAMFILE* open_clamp_streamfile(STREAMFILE *streamfile, off_t start, size_t si
 
     return &this_sf->sf;
 }
-STREAMFILE* open_clamp_streamfile_f(STREAMFILE *streamfile, off_t start, size_t size) {
-    STREAMFILE *new_sf = open_clamp_streamfile(streamfile, start, size);
+STREAMFILE* open_clamp_streamfile_f(STREAMFILE* streamfile, off_t start, size_t size) {
+    STREAMFILE* new_sf = open_clamp_streamfile(streamfile, start, size);
     if (!new_sf)
         close_streamfile(streamfile);
     return new_sf;
@@ -861,15 +869,15 @@ STREAMFILE* open_multifile_streamfile_f(STREAMFILE **streamfiles, size_t streamf
 
 /* **************************************************** */
 
-STREAMFILE* open_streamfile(STREAMFILE *streamfile, const char *pathname) {
-    return streamfile->open(streamfile, pathname, STREAMFILE_DEFAULT_BUFFER_SIZE);
+STREAMFILE* open_streamfile(STREAMFILE* sf, const char* pathname) {
+    return sf->open(sf, pathname, STREAMFILE_DEFAULT_BUFFER_SIZE);
 }
 
-STREAMFILE* open_streamfile_by_ext(STREAMFILE *streamfile, const char *ext) {
+STREAMFILE* open_streamfile_by_ext(STREAMFILE* sf, const char* ext) {
     char filename[PATH_LIMIT];
     int filename_len, fileext_len;
 
-    streamfile->get_name(streamfile, filename, sizeof(filename));
+    sf->get_name(sf, filename, sizeof(filename));
 
     filename_len = strlen(filename);
     fileext_len = strlen(filename_extension(filename));
@@ -882,31 +890,41 @@ STREAMFILE* open_streamfile_by_ext(STREAMFILE *streamfile, const char *ext) {
         strcpy(filename + filename_len - fileext_len, ext);
     }
 
-    return streamfile->open(streamfile, filename, STREAMFILE_DEFAULT_BUFFER_SIZE);
+    return sf->open(sf, filename, STREAMFILE_DEFAULT_BUFFER_SIZE);
 }
 
-STREAMFILE* open_streamfile_by_filename(STREAMFILE *streamfile, const char * filename) {
+STREAMFILE* open_streamfile_by_filename(STREAMFILE* sf, const char* filename) {
     char fullname[PATH_LIMIT];
     char partname[PATH_LIMIT];
-    char *path, *name;
+    char *path, *name, *otherpath;
 
-    if (!streamfile || !filename) return NULL;
+    if (!sf || !filename || !filename[0]) return NULL;
 
-    streamfile->get_name(streamfile, fullname, sizeof(fullname));
+    sf->get_name(sf, fullname, sizeof(fullname));
 
     //todo normalize separators in a better way, safeops, improve copying
-    path = strrchr(fullname,DIR_SEPARATOR);
+
+    /* check for non-normalized paths first (ex. txth) */
+    path = strrchr(fullname, '/');
+    otherpath = strrchr(fullname, '\\');
+    if (otherpath > path) { //todo cast to ptr?
+        /* foobar makes paths like "(fake protocol)://(windows path with \)".
+         * Hack to work around both separators, though probably foo_streamfile
+         * should just return and handle normalized paths without protocol. */
+        path = otherpath;
+    }
+
     if (path) {
         path[1] = '\0'; /* remove name after separator */
 
         strcpy(partname, filename);
-        fix_dir_separators(partname);
+        fix_dir_separators(partname); /* normalize to DIR_SEPARATOR */
 
         /* normalize relative paths as don't work ok in some plugins */
-        if (partname[0]=='.' && partname[1] == DIR_SEPARATOR) { /* './name' */
+        if (partname[0] == '.' && partname[1] == DIR_SEPARATOR) { /* './name' */
             name = partname + 2; /* ignore './' */
         }
-        else if (partname[0]=='.' && partname[1]=='.' && partname[2] == DIR_SEPARATOR) { /* '../name' */
+        else if (partname[0] == '.' && partname[1] == '.' && partname[2] == DIR_SEPARATOR) { /* '../name' */
             char *pathprev;
 
             path[0] = '\0'; /* remove last separator so next call works */
@@ -931,23 +949,23 @@ STREAMFILE* open_streamfile_by_filename(STREAMFILE *streamfile, const char * fil
         strcpy(fullname, filename);
     }
 
-    return streamfile->open(streamfile, fullname, STREAMFILE_DEFAULT_BUFFER_SIZE);
+    return sf->open(sf, fullname, STREAMFILE_DEFAULT_BUFFER_SIZE);
 }
 
-STREAMFILE* reopen_streamfile(STREAMFILE *streamfile, size_t buffer_size) {
+STREAMFILE* reopen_streamfile(STREAMFILE* sf, size_t buffer_size) {
     char pathname[PATH_LIMIT];
 
-    if (!streamfile) return NULL;
+    if (!sf) return NULL;
 
     if (buffer_size == 0)
         buffer_size = STREAMFILE_DEFAULT_BUFFER_SIZE;
-    streamfile->get_name(streamfile,pathname,sizeof(pathname));
-    return streamfile->open(streamfile,pathname,buffer_size);
+    sf->get_name(sf, pathname,sizeof(pathname));
+    return sf->open(sf, pathname, buffer_size);
 }
 
 /* **************************************************** */
 
-size_t read_line(char *buf, int buf_size, off_t offset, STREAMFILE *sf, int *p_line_ok) {
+size_t read_line(char* buf, int buf_size, off_t offset, STREAMFILE* sf, int* p_line_ok) {
     int i;
     off_t file_size = get_streamfile_size(sf);
     int extra_bytes = 0; /* how many bytes over those put in the buffer were read */
@@ -996,11 +1014,25 @@ size_t read_line(char *buf, int buf_size, off_t offset, STREAMFILE *sf, int *p_l
     return i + extra_bytes;
 }
 
-size_t read_string(char *buf, size_t buf_size, off_t offset, STREAMFILE *sf) {
+size_t read_bom(STREAMFILE* sf) {
+    if (read_u16le(0x00, sf) == 0xFFFE ||
+        read_u16le(0x00, sf) == 0xFEFF) {
+        return 0x02;
+    }
+
+    if ((read_u32be(0x00, sf) & 0xFFFFFF00) == 0xEFBBBF00) {
+        return 0x03;
+    }
+
+    return 0x00;
+}
+
+size_t read_string(char* buf, size_t buf_size, off_t offset, STREAMFILE* sf) {
     size_t pos;
 
     for (pos = 0; pos < buf_size; pos++) {
-        char c = read_8bit(offset + pos, sf);
+        uint8_t byte = read_u8(offset + pos, sf);
+        char c = (char)byte;
         if (buf) buf[pos] = c;
         if (c == '\0')
             return pos;
@@ -1008,7 +1040,8 @@ size_t read_string(char *buf, size_t buf_size, off_t offset, STREAMFILE *sf) {
             if (buf) buf[pos] = '\0';
             return buf_size;
         }
-        if (c < 0x20 || (uint8_t)c > 0xA5)
+        /* UTF-8 only goes to 0x7F, but allow a bunch of Windows-1252 codes that some games use */
+        if (byte < 0x20 || byte > 0xF0)
             goto fail;
     }
 
@@ -1017,7 +1050,7 @@ fail:
     return 0;
 }
 
-size_t read_string_utf16(char *buf, size_t buf_size, off_t offset, STREAMFILE *sf, int big_endian) {
+size_t read_string_utf16(char* buf, size_t buf_size, off_t offset, STREAMFILE* sf, int big_endian) {
     size_t pos, offpos;
     uint16_t (*read_u16)(off_t,STREAMFILE*) = big_endian ? read_u16be : read_u16le;
 
@@ -1047,16 +1080,16 @@ size_t read_string_utf16be(char* buf, size_t buf_size, off_t offset, STREAMFILE*
     return read_string_utf16(buf, buf_size, offset, sf, 1);
 }
 
+/* ************************************************************************* */
 
-
-size_t read_key_file(uint8_t *buf, size_t buf_size, STREAMFILE *sf) {
+size_t read_key_file(uint8_t* buf, size_t buf_size, STREAMFILE* sf) {
     char keyname[PATH_LIMIT];
     char filename[PATH_LIMIT];
     const char *path, *ext;
-    STREAMFILE * streamFileKey = NULL;
+    STREAMFILE* sf_key = NULL;
     size_t keysize;
 
-    sf->get_name(sf,filename,sizeof(filename));
+    get_streamfile_name(sf, filename, sizeof(filename));
 
     if (strlen(filename)+4 > sizeof(keyname)) goto fail;
 
@@ -1065,20 +1098,20 @@ size_t read_key_file(uint8_t *buf, size_t buf_size, STREAMFILE *sf) {
         ext = strrchr(filename,'.');
         if (ext!=NULL) ext = ext+1;
 
-        path = strrchr(filename,DIR_SEPARATOR);
+        path = strrchr(filename, DIR_SEPARATOR);
         if (path!=NULL) path = path+1;
 
         /* "(name.ext)key" */
         strcpy(keyname, filename);
         strcat(keyname, "key");
-        streamFileKey = sf->open(sf,keyname,STREAMFILE_DEFAULT_BUFFER_SIZE);
-        if (streamFileKey) goto found;
+        sf_key = sf->open(sf, keyname, STREAMFILE_DEFAULT_BUFFER_SIZE);
+        if (sf_key) goto found;
 
         /* "(name.ext)KEY" */
         /*
         strcpy(keyname+strlen(keyname)-3,"KEY");
-        streamFileKey = streamFile->open(streamFile,keyname,STREAMFILE_DEFAULT_BUFFER_SIZE);
-        if (streamFileKey) goto found;
+        sf_key = sf->open(sf, keyname, STREAMFILE_DEFAULT_BUFFER_SIZE);
+        if (sf_key) goto found;
         */
 
 
@@ -1092,35 +1125,104 @@ size_t read_key_file(uint8_t *buf, size_t buf_size, STREAMFILE *sf) {
         }
         if (ext) strcat(keyname, ext);
         strcat(keyname, "key");
-        streamFileKey = sf->open(sf,keyname,STREAMFILE_DEFAULT_BUFFER_SIZE);
-        if (streamFileKey) goto found;
+        sf_key = sf->open(sf, keyname, STREAMFILE_DEFAULT_BUFFER_SIZE);
+        if (sf_key) goto found;
 
         /* "(.ext)KEY" */
         /*
         strcpy(keyname+strlen(keyname)-3,"KEY");
-        streamFileKey = streamFile->open(streamFile,keyname,STREAMFILE_DEFAULT_BUFFER_SIZE);
-        if (streamFileKey) goto found;
+        sf_key = sf->open(sf, keyname, STREAMFILE_DEFAULT_BUFFER_SIZE);
+        if (sf_key) goto found;
         */
 
         goto fail;
     }
 
 found:
-    keysize = get_streamfile_size(streamFileKey);
+    keysize = get_streamfile_size(sf_key);
     if (keysize > buf_size) goto fail;
 
-    if (read_streamfile(buf, 0, keysize, streamFileKey) != keysize)
+    if (read_streamfile(buf, 0, keysize, sf_key) != keysize)
         goto fail;
 
-    close_streamfile(streamFileKey);
+    close_streamfile(sf_key);
     return keysize;
 
 fail:
-    close_streamfile(streamFileKey);
+    close_streamfile(sf_key);
     return 0;
 }
 
-void fix_dir_separators(char * filename) {
+STREAMFILE* read_filemap_file(STREAMFILE* sf, int file_num) {
+    return read_filemap_file_pos(sf, file_num, NULL);
+}
+
+STREAMFILE* read_filemap_file_pos(STREAMFILE* sf, int file_num, int* p_pos) {
+    char filename[PATH_LIMIT];
+    off_t txt_offset, file_size;
+    STREAMFILE* sf_map = NULL;
+    int file_pos = 0;
+
+    sf_map = open_streamfile_by_filename(sf, ".txtm");
+    if (!sf_map) goto fail;
+
+    get_streamfile_filename(sf, filename, sizeof(filename));
+
+    txt_offset = read_bom(sf_map);
+    file_size = get_streamfile_size(sf_map);
+
+    /* read lines and find target filename, format is (filename): value1, ... valueN */
+    while (txt_offset < file_size) {
+        char line[0x2000];
+        char key[PATH_LIMIT] = { 0 }, val[0x2000] = { 0 };
+        int ok, bytes_read, line_ok;
+
+        bytes_read = read_line(line, sizeof(line), txt_offset, sf_map, &line_ok);
+        if (!line_ok) goto fail;
+
+        txt_offset += bytes_read;
+
+        /* get key/val (ignores lead/trailing spaces, stops at comment/separator) */
+        ok = sscanf(line, " %[^\t#:] : %[^\t#\r\n] ", key, val);
+        if (ok != 2) { /* ignore line if no key=val (comment or garbage) */
+            continue;  
+        }
+
+        if (strcmp(key, filename) == 0) {
+            int n;
+            char subval[PATH_LIMIT];
+            const char* current = val;
+            int i;
+
+            for (i = 0; i <= file_num; i++) {
+                if (current[0] == '\0')
+                    goto fail;
+
+                ok = sscanf(current, " %[^\t#\r\n,]%n ", subval, &n);
+                if (ok != 1)
+                    goto fail;
+
+                if (i == file_num) {
+                    if (p_pos) *p_pos = file_pos;
+
+                    close_streamfile(sf_map);
+                    return open_streamfile_by_filename(sf, subval);
+                }
+
+                current += n;
+                if (current[0] == ',')
+                    current++;
+            }
+        }
+        file_pos++;
+    }
+
+fail:
+    close_streamfile(sf_map);
+    return NULL;
+}
+
+void fix_dir_separators(char* filename) {
     char c;
     int i = 0;
     while ((c = filename[i]) != '\0') {
@@ -1130,11 +1232,13 @@ void fix_dir_separators(char * filename) {
     }
 }
 
-int check_extensions(STREAMFILE *sf, const char * cmp_exts) {
+/* ************************************************************************* */
+
+int check_extensions(STREAMFILE* sf, const char* cmp_exts) {
     char filename[PATH_LIMIT];
-    const char * ext = NULL;
-    const char * cmp_ext = NULL;
-    const char * ststr_res = NULL;
+    const char* ext = NULL;
+    const char* cmp_ext = NULL;
+    const char* ststr_res = NULL;
     size_t ext_len, cmp_len;
 
     sf->get_name(sf,filename,sizeof(filename));
@@ -1160,6 +1264,7 @@ int check_extensions(STREAMFILE *sf, const char * cmp_exts) {
     return 0;
 }
 
+/* ************************************************************************* */
 
 /**
  * Find a chunk starting from an offset, and save its offset/size (if not NULL), with offset after id/size.
@@ -1169,11 +1274,11 @@ int check_extensions(STREAMFILE *sf, const char * cmp_exts) {
  *
  * returns 0 on failure
  */
-static int find_chunk_internal(STREAMFILE *streamFile, uint32_t chunk_id, off_t start_offset, size_t max_size, int full_chunk_size, off_t *out_chunk_offset, size_t *out_chunk_size, int big_endian_type, int big_endian_size, int zero_size_end) {
+static int find_chunk_internal(STREAMFILE* sf, uint32_t chunk_id, off_t start_offset, size_t max_size, int full_chunk_size, off_t *out_chunk_offset, size_t *out_chunk_size, int big_endian_type, int big_endian_size, int zero_size_end) {
     int32_t (*read_32bit_type)(off_t,STREAMFILE*) = big_endian_type ? read_32bitBE : read_32bitLE;
     int32_t (*read_32bit_size)(off_t,STREAMFILE*) = big_endian_size ? read_32bitBE : read_32bitLE;
     off_t offset, max_offset;
-    size_t file_size = get_streamfile_size(streamFile);
+    size_t file_size = get_streamfile_size(sf);
 
     if (max_size == 0)
         max_size = file_size;
@@ -1186,8 +1291,8 @@ static int find_chunk_internal(STREAMFILE *streamFile, uint32_t chunk_id, off_t 
 
     /* read chunks */
     while (offset < max_offset) {
-        uint32_t chunk_type = read_32bit_type(offset + 0x00,streamFile);
-        uint32_t chunk_size = read_32bit_size(offset + 0x04,streamFile);
+        uint32_t chunk_type = read_32bit_type(offset + 0x00,sf);
+        uint32_t chunk_size = read_32bit_size(offset + 0x04,sf);
         //;VGM_LOG("CHUNK: type=%x, size=%x at %lx\n", chunk_type, chunk_size, offset);
 
         if (chunk_type == 0xFFFFFFFF || chunk_size == 0xFFFFFFFF)
@@ -1208,36 +1313,39 @@ static int find_chunk_internal(STREAMFILE *streamFile, uint32_t chunk_id, off_t 
 
     return 0;
 }
-int find_chunk_be(STREAMFILE *streamFile, uint32_t chunk_id, off_t start_offset, int full_chunk_size, off_t *out_chunk_offset, size_t *out_chunk_size) {
-    return find_chunk(streamFile, chunk_id, start_offset, full_chunk_size, out_chunk_offset, out_chunk_size, 1, 0);
+int find_chunk_be(STREAMFILE* sf, uint32_t chunk_id, off_t start_offset, int full_chunk_size, off_t *out_chunk_offset, size_t *out_chunk_size) {
+    return find_chunk(sf, chunk_id, start_offset, full_chunk_size, out_chunk_offset, out_chunk_size, 1, 0);
 }
-int find_chunk_le(STREAMFILE *streamFile, uint32_t chunk_id, off_t start_offset, int full_chunk_size, off_t *out_chunk_offset, size_t *out_chunk_size) {
-    return find_chunk(streamFile, chunk_id, start_offset, full_chunk_size, out_chunk_offset, out_chunk_size, 0, 0);
+int find_chunk_le(STREAMFILE* sf, uint32_t chunk_id, off_t start_offset, int full_chunk_size, off_t *out_chunk_offset, size_t *out_chunk_size) {
+    return find_chunk(sf, chunk_id, start_offset, full_chunk_size, out_chunk_offset, out_chunk_size, 0, 0);
 }
-int find_chunk(STREAMFILE *streamFile, uint32_t chunk_id, off_t start_offset, int full_chunk_size, off_t *out_chunk_offset, size_t *out_chunk_size, int big_endian_size, int zero_size_end) {
-    return find_chunk_internal(streamFile, chunk_id, start_offset, 0, full_chunk_size, out_chunk_offset, out_chunk_size, 1, big_endian_size, zero_size_end);
+int find_chunk(STREAMFILE* sf, uint32_t chunk_id, off_t start_offset, int full_chunk_size, off_t *out_chunk_offset, size_t *out_chunk_size, int big_endian_size, int zero_size_end) {
+    return find_chunk_internal(sf, chunk_id, start_offset, 0, full_chunk_size, out_chunk_offset, out_chunk_size, 1, big_endian_size, zero_size_end);
 }
-int find_chunk_riff_le(STREAMFILE *streamFile, uint32_t chunk_id, off_t start_offset, size_t max_size, off_t *out_chunk_offset, size_t *out_chunk_size) {
-    return find_chunk_internal(streamFile, chunk_id, start_offset, max_size, 0, out_chunk_offset, out_chunk_size, 1, 0, 0);
+int find_chunk_riff_le(STREAMFILE* sf, uint32_t chunk_id, off_t start_offset, size_t max_size, off_t *out_chunk_offset, size_t *out_chunk_size) {
+    return find_chunk_internal(sf, chunk_id, start_offset, max_size, 0, out_chunk_offset, out_chunk_size, 1, 0, 0);
 }
-int find_chunk_riff_be(STREAMFILE *streamFile, uint32_t chunk_id, off_t start_offset, size_t max_size, off_t *out_chunk_offset, size_t *out_chunk_size) {
-    return find_chunk_internal(streamFile, chunk_id, start_offset, max_size, 0, out_chunk_offset, out_chunk_size, 1, 1, 0);
+int find_chunk_riff_be(STREAMFILE* sf, uint32_t chunk_id, off_t start_offset, size_t max_size, off_t *out_chunk_offset, size_t *out_chunk_size) {
+    return find_chunk_internal(sf, chunk_id, start_offset, max_size, 0, out_chunk_offset, out_chunk_size, 1, 1, 0);
 }
-int find_chunk_riff_ve(STREAMFILE *streamFile, uint32_t chunk_id, off_t start_offset, size_t max_size, off_t *out_chunk_offset, size_t *out_chunk_size, int big_endian) {
-    return find_chunk_internal(streamFile, chunk_id, start_offset, max_size, 0, out_chunk_offset, out_chunk_size, big_endian, big_endian, 0);
+int find_chunk_riff_ve(STREAMFILE* sf, uint32_t chunk_id, off_t start_offset, size_t max_size, off_t *out_chunk_offset, size_t *out_chunk_size, int big_endian) {
+    return find_chunk_internal(sf, chunk_id, start_offset, max_size, 0, out_chunk_offset, out_chunk_size, big_endian, big_endian, 0);
 }
+
+/* ************************************************************************* */
 
 /* copies name as-is (may include full path included) */
-void get_streamfile_name(STREAMFILE *streamFile, char * buffer, size_t size) {
-    streamFile->get_name(streamFile,buffer,size);
+void get_streamfile_name(STREAMFILE* sf, char* buffer, size_t size) {
+    sf->get_name(sf, buffer, size);
 }
+
 /* copies the filename without path */
-void get_streamfile_filename(STREAMFILE *streamFile, char * buffer, size_t size) {
+void get_streamfile_filename(STREAMFILE* sf, char* buffer, size_t size) {
     char foldername[PATH_LIMIT];
-    const char *path;
+    const char* path;
 
 
-    streamFile->get_name(streamFile,foldername,sizeof(foldername));
+    get_streamfile_name(sf, foldername, sizeof(foldername));
 
     //todo Windows CMD accepts both \\ and /, better way to handle this?
     path = strrchr(foldername,'\\');
@@ -1253,22 +1361,24 @@ void get_streamfile_filename(STREAMFILE *streamFile, char * buffer, size_t size)
         strcpy(buffer, foldername);
     }
 }
-/* copies the filename without path or extension */
-void get_streamfile_basename(STREAMFILE *streamFile, char * buffer, size_t size) {
-    char *ext;
 
-    get_streamfile_filename(streamFile,buffer,size);
+/* copies the filename without path or extension */
+void get_streamfile_basename(STREAMFILE* sf, char* buffer, size_t size) {
+    char* ext;
+
+    get_streamfile_filename(sf, buffer, size);
 
     ext = strrchr(buffer,'.');
     if (ext) {
         ext[0] = '\0'; /* remove .ext from buffer */
     }
 }
-/* copies path removing name (NULL when if filename has no path) */
-void get_streamfile_path(STREAMFILE *streamFile, char * buffer, size_t size) {
-    const char *path;
 
-    streamFile->get_name(streamFile,buffer,size);
+/* copies path removing name (NULL when if filename has no path) */
+void get_streamfile_path(STREAMFILE* sf, char* buffer, size_t size) {
+    const char* path;
+
+    get_streamfile_name(sf, buffer, size);
 
     path = strrchr(buffer,DIR_SEPARATOR);
     if (path!=NULL) path = path+1; /* includes "/" */
@@ -1279,34 +1389,47 @@ void get_streamfile_path(STREAMFILE *streamFile, char * buffer, size_t size) {
         buffer[0] = '\0';
     }
 }
-void get_streamfile_ext(STREAMFILE *streamFile, char * filename, size_t size) {
-    streamFile->get_name(streamFile,filename,size);
-    strcpy(filename, filename_extension(filename));
+
+/* copies extension only */
+void get_streamfile_ext(STREAMFILE* sf, char* buffer, size_t size) {
+    char filename[PATH_LIMIT];
+    const char* extension = NULL;
+
+    get_streamfile_name(sf, filename, sizeof(filename));
+    extension = filename_extension(filename);
+    if (!extension) {
+        buffer[0] = '\n';
+    }
+    else {
+        strncpy(buffer, extension, size); //todo use something better
+    }
 }
 
+/* ************************************************************************* */
+
 /* debug util, mainly for custom IO testing */
-void dump_streamfile(STREAMFILE *streamFile, int num) {
+void dump_streamfile(STREAMFILE* sf, int num) {
 #ifdef VGM_DEBUG_OUTPUT
     off_t offset = 0;
-    FILE *f = NULL;
+    FILE* f = NULL;
 
     if (num >= 0) {
         char filename[PATH_LIMIT];
         char dumpname[PATH_LIMIT];
 
-        get_streamfile_filename(streamFile, filename, PATH_LIMIT);
+        get_streamfile_filename(sf, filename, PATH_LIMIT);
         snprintf(dumpname,PATH_LIMIT, "%s_%02i.dump", filename, num);
 
         f = fopen(dumpname,"wb");
         if (!f) return;
     }
 
-    VGM_LOG("dump streamfile: size %x\n", get_streamfile_size(streamFile));
-    while (offset < get_streamfile_size(streamFile)) {
+    VGM_LOG("dump streamfile: size %x\n", get_streamfile_size(sf));
+    while (offset < get_streamfile_size(sf)) {
         uint8_t buffer[0x8000];
         size_t read;
 
-        read = read_streamfile(buffer,offset,0x8000,streamFile);
+        read = read_streamfile(buffer,offset,0x8000,sf);
         if(!read) {
             VGM_LOG("dump streamfile: can't read at %lx\n", offset);
             break;

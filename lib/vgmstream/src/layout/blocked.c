@@ -1,11 +1,13 @@
 #include "layout.h"
 #include "../vgmstream.h"
+#include "../decode.h"
+#include "../coding/coding.h"
 
 
 /* Decodes samples for blocked streams.
  * Data is divided into headered blocks with a bunch of data. The layout calls external helper functions
  * when a block is decoded, and those must parse the new block and move offsets accordingly. */
-void render_vgmstream_blocked(sample_t * buffer, int32_t sample_count, VGMSTREAM * vgmstream) {
+void render_vgmstream_blocked(sample_t* buffer, int32_t sample_count, VGMSTREAM* vgmstream) {
     int samples_written = 0;
     int frame_size, samples_per_frame, samples_this_block;
 
@@ -52,7 +54,7 @@ void render_vgmstream_blocked(sample_t * buffer, int32_t sample_count, VGMSTREAM
             break;
         }
 
-        samples_to_do = vgmstream_samples_to_do(samples_this_block, samples_per_frame, vgmstream);
+        samples_to_do = get_vgmstream_samples_to_do(samples_this_block, samples_per_frame, vgmstream);
         if (samples_to_do > sample_count - samples_written)
             samples_to_do = sample_count - samples_written;
 
@@ -89,7 +91,7 @@ void render_vgmstream_blocked(sample_t * buffer, int32_t sample_count, VGMSTREAM
 }
 
 /* helper functions to parse new block */
-void block_update(off_t block_offset, VGMSTREAM * vgmstream) {
+void block_update(off_t block_offset, VGMSTREAM* vgmstream) {
     switch (vgmstream->layout_type) {
         case layout_blocked_ast:
             block_update_ast(block_offset,vgmstream);
@@ -181,8 +183,8 @@ void block_update(off_t block_offset, VGMSTREAM * vgmstream) {
         case layout_blocked_vgs:
             block_update_vgs(block_offset,vgmstream);
             break;
-        case layout_blocked_vawx:
-            block_update_vawx(block_offset,vgmstream);
+        case layout_blocked_xwav:
+            block_update_xwav(block_offset,vgmstream);
             break;
         case layout_blocked_xvag_subsong:
             block_update_xvag_subsong(block_offset,vgmstream);
@@ -214,4 +216,39 @@ void block_update(off_t block_offset, VGMSTREAM * vgmstream) {
         default: /* not a blocked layout */
             break;
     }
+}
+
+void blocked_count_samples(VGMSTREAM* vgmstream, STREAMFILE* sf, off_t offset) {
+    int block_samples;
+    off_t max_offset = get_streamfile_size(sf);
+
+    vgmstream->next_block_offset = offset;
+    do {
+        block_update(vgmstream->next_block_offset, vgmstream);
+
+        if (vgmstream->current_block_samples < 0 || vgmstream->current_block_size == 0xFFFFFFFF)
+            break;
+
+        if (vgmstream->current_block_samples) {
+            block_samples = vgmstream->current_block_samples;
+        }
+        else {
+            switch(vgmstream->coding_type) {
+                case coding_PCM16_int:  block_samples = pcm16_bytes_to_samples(vgmstream->current_block_size, 1); break;
+                case coding_PCM8_int:
+                case coding_PCM8_U_int: block_samples = pcm8_bytes_to_samples(vgmstream->current_block_size, 1); break;
+                case coding_XBOX_IMA:   block_samples = xbox_ima_bytes_to_samples(vgmstream->current_block_size, 1); break;
+                case coding_NGC_DSP:    block_samples = dsp_bytes_to_samples(vgmstream->current_block_size, 1); break;
+                case coding_PSX:     	block_samples = ps_bytes_to_samples(vgmstream->current_block_size,1); break;
+                default:
+                    VGM_LOG("BLOCKED: missing codec\n");
+                    return;
+            }
+        }
+
+        vgmstream->num_samples += block_samples;
+    }
+    while (vgmstream->next_block_offset < max_offset);
+
+    block_update(offset, vgmstream); /* reset */
 }

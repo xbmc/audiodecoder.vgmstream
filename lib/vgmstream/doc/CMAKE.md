@@ -2,34 +2,28 @@
 
 ## Build requirements
 
-**CMake**: Needs v3.6 or later
+**CMake**: needs v3.6 or later
 - https://cmake.org/download/
 
-**Git**: optional, to generate version numbers:
-- Git for Windows: https://git-scm.com/download/win
+**Git**: optional, for version numbers
+- Windows: https://git-scm.com/download/win
 
-If building for Windows, you need one of the following:
+**GCC / Make** 
+- Windows: https://sourceforge.net/projects/mingw-w64/
 
-**GCC / Make**: In Windows this means one of these two somewhere in PATH:
-- MinGW-w64 (32bit version): https://sourceforge.net/projects/mingw-w64/
-  - Use this for easier standalone executables
-  - Latest online installer with any config should work (for example: gcc-7.2.0, i686, win32, sjlj).
-- MSYS2 with the MinGW-w64_shell (32bit) package: https://msys2.github.io/
-
-**MSVC / Visual Studio**: Microsoft's Visual C++ and MSBuild, bundled in either:
-- Visual Studio (2015/2017/latest): https://www.visualstudio.com/downloads/
-  - Visual Studio Community should work (free, but must register after trial period)
-- Visual C++ Build Tools (no IDE): http://landinghub.visualstudio.com/visual-cpp-build-tools
+**MSVC / Visual Studio**
+- Windows: https://www.visualstudio.com/downloads/
 
 If building the CLI for *nix-based OSes, vgmstream123 also needs the following:
-
 - **LibAO**
 
 If building for *nix-based OSes, the following libraries are optional:
-
 - **libmpg123**
 - **libvorbis** (really libvorbisfile, though)
 - **FFmpeg**
+
+See [BUILD.md](BUILD.md)'s *Compilation requirements* for more info about various component and installation.
+
 
 ## Build directions
 
@@ -41,7 +35,7 @@ First you will need to run CMake to generate the build setup. You can use either
 
 ### CMake GUI
 
-If you have access to the CMake GUI, you can use that to create your build setup. Select where the source code is (that should be the directory just above this one) and where you wish to build to.
+If you have access to the CMake GUI, you can use that to create your build setup. Select where the source code is (that should be the directory just above this one) and where you wish to build to (preferably a directory outside source).
 
 You may have to add some entries before configuring will succeed. See the [CMake Cache Entries](#cmake-cache-entries) section for details on the entries.
 
@@ -54,6 +48,8 @@ Generating done
 
 Before that you'll see what options are enabled and disabled, what is going to be built and where they will be installed to.
 
+You may need to select a Generator first, depending on your installed tools (for example, Visual Studio 16 2019 or MingW Make on Windows). If you need to change it later, select *File > Delete Cache*. You may need to include those tools in the *Path* variable, inside *Environment...* options.
+
 If you decided to build for a project-based GUI, you can click on Open Project to open that. (NOTE: Only Visual Studio has been tested as a project-based GUI.) If you decided to build for a command line build system, you can open up the command line for the build directory and run your build system.
 
 ### CMake command line
@@ -64,11 +60,35 @@ If you don't have access to the CMake GUI or would prefer to only use the comman
 cmake -G "<generator>" <options> <path to source code>
 ```
 
-Replace `<generator>` with the CMake generator you wish to use as your build system. Make note of the quotes, and use `cmake -h` to get a list of generators for your system.
+Replace `<generator>` with the CMake generator you wish to use as your build system (for example `Unix Makefiles`, or don't set for default). Make note of the quotes, and use `cmake -h` to get a list of generators for your system.
 
 You may have to add some entries before configuring will success. See the [CMake Cache Entries](#cmake-cache-entries) section for details on the entries.
 
-Place your entries in the `<options>` section of the above command, with each option in the form of `-D<optionname>:<type>=<value>`. Replace `<path to source code>` with the path where the source code is (that should be the directory just above this one).
+Place your entries in the `<options>` section of the above command, with each option in the form of `-D<optionname>:<type>=<value>`. Replace `<path to source code>` with the path where the source code is (that should be the directory just above this one), may need to se `-S <path to source> -B <output dir>` instead. Example:
+```
+git clone https://github.com/vgmstream/vgmstream.git
+cd vgmstream
+cmake -DUSE_FFMPEG=ON -DBUILD_AUDACIOUS=OFF -S . -B build
+```
+
+You may need to install appropriate packages first (see [BUILD.md)(BUILD.md) for more info), for example:
+```
+sudo apt-get update
+# basic compilation
+sudo apt-get install -y gcc g++ make build-essential 
+# extra libs
+sudo apt-get install -y libmpg123-dev libvorbis-dev libspeex-dev
+# extra libs
+sudo apt-get install -y libavformat-dev libavcodec-dev libavutil-dev libswresample-dev
+# for vgmstream123 and audacious
+sudo apt-get install -y libao-dev audacious-dev
+# for JSON dumping
+sudo apt-get install -y libjansson-dev
+# for static builds
+sudo apt-get install -y yasm libopus-dev
+# actual cmake
+sudo apt-get install -y cmake
+```
 
 Once you have run the command, as long as there are no errors, you should see the following at the bottom of the window:
 
@@ -96,18 +116,22 @@ If not using a project-based GUI, then you will also need to set what build type
 
 All of these options are of type BOOL and can be set to either `ON` or `OFF`. Most of the details on these libraries can be found in the [External Libraries section of BUILD.md](BUILD.md#external-libraries).
 
-- **USE_FDKAAC**: Chooses if you wish to use FDK-AAC/QAAC for support of MP4 AAC. Note that this requires `QAAC_PATH` and `FDK_AAC_PATH` to also be given if the option is `ON`. The default for is `ON`. See the foobar2000 plugin section of [BUILD.md](BUILD.md) for more information on this.
 - **USE_MPEG**: Chooses if you wish to use libmpg123 for support of MP1/MP2/MP3. The default is `ON`.
 - **USE_VORBIS**: Chooses if you wish to use libvorbis for support of Vorbis. The default is `ON`.
-- **USE_FFMPEG**: Chooses if you wish to use FFmpeg for support of many codecs. The default is `ON`.
+- **USE_FFMPEG**: Chooses if you wish to use FFmpeg for support of many codecs. The default is `ON`. `FFMPEG_PATH` can also be given, so it can use official/external SDK instead of the one used in vgmstream project.
 - **USE_MAIATRAC3PLUS**: Chooses if you wish to use MAIATRAC3+ for support of ATRAC3+. The default is `OFF`. It is not recommended to enable.
 - **USE_G7221**: Chooses if you wish to use G7221 for support of ITU-T G.722.1 annex C. The default is `ON`.
-
-The following options are currently only available for Windows:
-
 - **USE_G719**: Chooses if you wish to use libg719_decode for support ITU-T G.719. The default is `ON`.
 - **USE_ATRAC9**: Chooses if you wish to use LibAtrac9 for support of ATRAC9. The default is `ON`.
+- **USE_SPEEX**: Chooses if you wish to use libspeex for support of SPEEX. The default is `ON`.
+
+The following option is currently only available for Windows:
+
 - **USE_CELT**: Chooses if you wish to use libcelt for support of FSB CELT versions 0.6.1 and 0.11.0. The default is `ON`.
+
+The following option is only available for *nix-based OSes:
+
+- **USE_JANSSON**: Chooses if you wish to use libjansson for support of JSON dumping capabilities. The default is `ON`.
 
 #### Build Options
 
@@ -123,7 +147,9 @@ The following options are only available for Windows:
 
 The following option is only available for *nix-based OSes:
 
+- **BUILD_V123**: Chooses if you wih to build the vgmstream123 player. The default is `ON`.
 - **BUILD_AUDACIOUS**: Chooses if you wish to build the Audacious plugin. The default is `ON`.
+- **BUILD_STATIC**: Chooses if you wish to build the vgmstream CLI program, statically linking every dependency. Enabling this currently disables building vgmstream123 and the Audacious plugin. The default is `OFF`.
 
 #### Paths
 
@@ -133,10 +159,12 @@ If FDK-AAC/QAAC support is enabled, the following paths are required (with more 
 
 - **QAAC_PATH**: The path to the QAAC library. It can be obtained at https://github.com/kode54/qaac
 - **FDK_AAC_PATH**: The path to the FDK-AAC library. It can be obtained at https://github.com/kode54/fdk-aac
-
-If MAIATRAC3+ support is enabled, the following path is required:
-
-- **MAIATRAC3PLUS_PATH**: The path to the MAIATRAC3+ library. It is not recommended to use.
+- **MAIATRAC3PLUS_PATH**: The path to the MAIATRAC3+ library. If MAIATRAC3+ support is enabled, providing this path is required. It is not recommended to use.
+- **MPEG_PATH**: The path to the mpg123 library. It can be obtained from [the mpg123 project on SourceForge.net](https://sourceforge.net/projects/mpg123/files/mpg123/1.25.10/). If not set and static building is enabled, this will be downloaded automatically.
+- **FFMPEG_PATH**: The path to the FFmpeg source directory. It can be obtained at https://git.ffmpeg.org/ffmpeg.git If not set and static building is enabled, this will be downloaded automatically.
+- **G719_PATH**: The path to the G.719 decoder library. It can be obtained at https://github.com/kode54/libg719_decode If not set, it is downloaded automatically on Linux.
+- **ATRAC9_PATH**: The path to the Atrac9 library. It can be obtained at https://github.com/Thealexbarney/LibAtrac9 If not set, it is downloaded automatically on Linux.
+- **LIBAO_PATH**: The path to the AO library. If static building is enabled and you chose to build the vgmstream123 player, providing this path is required. It is not recommended to use.
 
 The CLI/vgmstream123 programs are normally installed to `CMAKE_INSTALL_PREFIX`, changing this will change where those are installed.
 
