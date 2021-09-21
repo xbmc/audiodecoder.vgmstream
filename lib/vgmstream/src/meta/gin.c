@@ -1,26 +1,18 @@
 #include "meta.h"
 #include "../coding/coding.h"
 
-VGMSTREAM * init_vgmstream_gin_header(STREAMFILE *streamFile, off_t offset);
-
 /* .gin - EA engine sounds [Need for Speed: Most Wanted (multi)] */
-VGMSTREAM * init_vgmstream_gin(STREAMFILE *streamFile) {
-    if (!check_extensions(streamFile, "gin"))
-        goto fail;
-
-    return init_vgmstream_gin_header(streamFile, 0x00);
-
-fail:
-    return NULL;
-}
-
-VGMSTREAM * init_vgmstream_gin_header(STREAMFILE *streamFile, off_t offset) {
-    VGMSTREAM * vgmstream = NULL;
+VGMSTREAM * init_vgmstream_gin(STREAMFILE *sf) {
+    VGMSTREAM *vgmstream = NULL;
     off_t start_offset;
     int loop_flag, channel_count, sample_rate, num_samples;
 
+    if (!check_extensions(sf, "gin"))
+        goto fail;
+
     /* checks */
-    if (read_32bitBE(offset + 0x00, streamFile) != 0x476E7375) /* "Gnsu" */
+    if (!is_id32be(0x00, sf, "Gnsu") && /* original */
+        !is_id32be(0x00, sf, "Octn")) /* later (2013+) games, looks same as "Gnsu" */
         goto fail;
 
     /* contains mapped values for engine RPM sounds but we'll just play the whole thing */
@@ -30,11 +22,11 @@ VGMSTREAM * init_vgmstream_gin_header(STREAMFILE *streamFile, off_t offset) {
     /* 0x14: RPM ??? table size */
     /* always LE even on X360/PS3 */
 
-    num_samples = read_32bitLE(offset + 0x18, streamFile);
-    sample_rate = read_32bitLE(offset + 0x1c, streamFile);
-    start_offset = offset + 0x20 +
-        (read_32bitLE(offset + 0x10, streamFile) + 1) * 0x04 +
-        (read_32bitLE(offset + 0x14, streamFile) + 1) * 0x04;
+    num_samples = read_u32le(0x18, sf);
+    sample_rate = read_u32le(0x1c, sf);
+    start_offset = 0x20 +
+        (read_u32le(0x10, sf) + 1) * 0x04 +
+        (read_u32le(0x14, sf) + 1) * 0x04;
     channel_count = 1;
     loop_flag = 0;
 
@@ -53,7 +45,7 @@ VGMSTREAM * init_vgmstream_gin_header(STREAMFILE *streamFile, off_t offset) {
     /* calculate size for TMX */
     vgmstream->stream_size = (align_size_to_block(num_samples, 32) / 32) * 0x13;
 
-    if (!vgmstream_open_stream(vgmstream, streamFile, start_offset))
+    if (!vgmstream_open_stream(vgmstream, sf, start_offset))
         goto fail;
     return vgmstream;
 

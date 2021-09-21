@@ -29,8 +29,8 @@ static const int EA_XA_TABLE[20] = {
     0,   -1,   -3,   -4
 };
 
-/* EA XA v2 (always mono); like ea_xa_int but with "PCM samples" flag and doesn't add 128 on expand or clamp (pre-adjusted by the encoder?) */
-void decode_ea_xa_v2(VGMSTREAMCHANNEL * stream, sample * outbuf, int channelspacing, int32_t first_sample, int32_t samples_to_do, int channel) {
+/* EA XA v2 (always mono); like v1 but with "PCM samples" flag and doesn't add 128 on expand or clamp (pre-adjusted by the encoder?) */
+void decode_ea_xa_v2(VGMSTREAMCHANNEL* stream, sample_t* outbuf, int channelspacing, int32_t first_sample, int32_t samples_to_do) {
     uint8_t frame_info;
     int32_t coef1, coef2;
     int i, sample_count, shift;
@@ -60,7 +60,7 @@ void decode_ea_xa_v2(VGMSTREAMCHANNEL * stream, sample * outbuf, int channelspac
         coef2 = EA_XA_TABLE[(frame_info >> 4) + 4];
         shift = (frame_info & 0x0F) + 8;
 
-        for (i=first_sample,sample_count=0; i<first_sample+samples_to_do; i++,sample_count+=channelspacing) {
+        for (i=first_sample,sample_count=0; i<first_sample+samples_to_do; i++, sample_count += channelspacing) {
             uint8_t sample_byte, sample_nibble;
             int32_t new_sample;
             off_t byte_offset = (stream->offset + 0x01 + i/2);
@@ -84,10 +84,10 @@ void decode_ea_xa_v2(VGMSTREAMCHANNEL * stream, sample * outbuf, int channelspac
 }
 
 #if 0
-/* later PC games use float math, though in the end sounds basically the same (decompiled from various exes) */
+/* later PC games and EAAC use float math, though in the end sounds basically the same (decompiled from various exes) */
 static const double XA_K0[16] = { 0.0, 0.9375, 1.796875,  1.53125 };
 static const double XA_K1[16] = { 0.0,    0.0,  -0.8125, -0.859375 };
-/* code uses look-up table but it's be equivalent to:
+/* code uses look-up table but it's equivalent to:
  * (double)((nibble << 28) >> (shift + 8) >> 8) or (double)(signed_nibble << (12 - shift)) */
 static const uint32_t FLOAT_TABLE_INT[256] = {
         0x00000000,0x45800000,0x46000000,0x46400000,0x46800000,0x46A00000,0x46C00000,0x46E00000,
@@ -123,9 +123,9 @@ static const uint32_t FLOAT_TABLE_INT[256] = {
         0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,
         0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,
 };
-static const float *FLOAT_TABLE = (const float *)FLOAT_TABLE_INT;
+static const float* FLOAT_TABLE = (const float *)FLOAT_TABLE_INT;
 
-void decode_ea_xa_v2(VGMSTREAMCHANNEL * stream, sample * outbuf, int channelspacing, int32_t first_sample, int32_t samples_to_do, int channel) {
+void decode_ea_xa_v2_f32(VGMSTREAMCHANNEL* stream, sample_t* outbuf, int channelspacing, int32_t first_sample, int32_t samples_to_do) {
     uint8_t frame_info;
     int i, sample_count, shift;
 
@@ -183,32 +183,40 @@ void decode_ea_xa_v2(VGMSTREAMCHANNEL * stream, sample * outbuf, int channelspac
 }
 #endif
 
-/* EA XA v1 stereo */
-void decode_ea_xa(VGMSTREAMCHANNEL * stream, sample * outbuf, int channelspacing, int32_t first_sample, int32_t samples_to_do,int channel) {
+/* EA XA v1 (mono/stereo) */
+void decode_ea_xa(VGMSTREAMCHANNEL* stream, sample_t* outbuf, int channelspacing, int32_t first_sample, int32_t samples_to_do, int channel, int is_stereo) {
     uint8_t frame_info;
     int32_t coef1, coef2;
     int i, sample_count, shift;
     int hn = (channel==0); /* high nibble marker for stereo subinterleave, ch0/L=high nibble, ch1/R=low nibble */
 
-    int frame_size = 0x1e;
+    int frame_size = is_stereo ? 0x0f*2 : 0x0f;
     int frame_samples = 28;
     first_sample = first_sample % frame_samples;
 
-    /* header (coefs ch0+ch1 + shift ch0+ch1) */
-    frame_info = read_8bit(stream->offset+0x00,stream->streamfile);
-    coef1 = EA_XA_TABLE[(hn ? frame_info >> 4 : frame_info & 0x0F) + 0];
-    coef2 = EA_XA_TABLE[(hn ? frame_info >> 4 : frame_info & 0x0F) + 4];
-    shift = (frame_info & 0x0F) + 8;
+    /* header */
+    if (is_stereo) {
+        /* coefs ch0+ch1 + shift ch0+ch1 */
+        frame_info = read_8bit(stream->offset + 0x00, stream->streamfile);
+        coef1 = EA_XA_TABLE[(hn ? frame_info >> 4 : frame_info & 0x0F) + 0];
+        coef2 = EA_XA_TABLE[(hn ? frame_info >> 4 : frame_info & 0x0F) + 4];
 
-    frame_info = read_8bit(stream->offset+0x01,stream->streamfile);
-    shift = (hn ? frame_info >> 4 : frame_info & 0x0F) + 8;
+        frame_info = read_8bit(stream->offset + 0x01, stream->streamfile);
+        shift = (hn ? frame_info >> 4 : frame_info & 0x0F) + 8;
+    } else {
+        /* coefs + shift ch0 */
+        frame_info = read_8bit(stream->offset + 0x00, stream->streamfile);
+        coef1 = EA_XA_TABLE[(frame_info >> 4) + 0];
+        coef2 = EA_XA_TABLE[(frame_info >> 4) + 4];
+        shift = (frame_info & 0x0F) + 8;
+    }
 
     /* samples */
     for (i=first_sample,sample_count=0; i<first_sample+samples_to_do; i++,sample_count+=channelspacing) {
         uint8_t sample_byte, sample_nibble;
         int32_t new_sample;
-        off_t byte_offset = (stream->offset + 0x02 + i);
-        int nibble_shift = (hn ? 4 : 0); /* high nibble first */
+        off_t byte_offset = is_stereo ? (stream->offset + 0x02 + i) : (stream->offset + 0x01 + i/2);
+        int nibble_shift = is_stereo ? (hn ? 4 : 0) : ((!(i & 1)) ? 4 : 0); /* high nibble first */
 
         sample_byte = (uint8_t)read_8bit(byte_offset,stream->streamfile);
         sample_nibble = (sample_byte >> nibble_shift) & 0x0F;
@@ -226,47 +234,8 @@ void decode_ea_xa(VGMSTREAMCHANNEL * stream, sample * outbuf, int channelspacing
         stream->offset += frame_size;
 }
 
-/* EA-XA v1 mono/interleave */
-void decode_ea_xa_int(VGMSTREAMCHANNEL * stream, sample * outbuf, int channelspacing, int32_t first_sample, int32_t samples_to_do,int channel) {
-    uint8_t frame_info;
-    int32_t coef1, coef2;
-    int i, sample_count, shift;
-
-    int frame_size = 0x0f;
-    int frame_samples = 28;
-    first_sample = first_sample % frame_samples;
-
-    /* header (coefs+shift ch0) */
-    frame_info = read_8bit(stream->offset,stream->streamfile);
-    coef1 = EA_XA_TABLE[(frame_info >> 4) + 0];
-    coef2 = EA_XA_TABLE[(frame_info >> 4) + 4];
-    shift = (frame_info & 0x0F) + 8;
-
-    /* samples */
-    for (i=first_sample,sample_count=0; i<first_sample+samples_to_do; i++,sample_count+=channelspacing) {
-        uint8_t sample_byte, sample_nibble;
-        int32_t new_sample;
-        off_t byte_offset = (stream->offset + 0x01 + i/2);
-        int nibble_shift = (!(i&1)) ? 4 : 0; /* high nibble first */
-
-        sample_byte = (uint8_t)read_8bit(byte_offset,stream->streamfile);
-        sample_nibble = (sample_byte >> nibble_shift) & 0x0F;
-        new_sample = (sample_nibble << 28) >> shift; /* sign extend to 32b and shift */
-        new_sample = (new_sample + coef1 * stream->adpcm_history1_32 + coef2 * stream->adpcm_history2_32 + 128) >> 8;
-        new_sample = clamp16(new_sample);
-
-        outbuf[sample_count] = new_sample;
-        stream->adpcm_history2_32 = stream->adpcm_history1_32;
-        stream->adpcm_history1_32 = new_sample;
-    }
-
-    /* only increment offset on complete frame */
-    if (i == frame_samples)
-        stream->offset += frame_size;
-}
-
-/* Maxis EA-XA v1 (mono+stereo) with byte-interleave layout in stereo mode */
-void decode_maxis_xa(VGMSTREAMCHANNEL * stream, sample * outbuf, int channelspacing, int32_t first_sample, int32_t samples_to_do, int channel) {
+/* Maxis EA-XA v1 (mono/stereo) with byte-interleave layout in stereo mode */
+void decode_maxis_xa(VGMSTREAMCHANNEL* stream, sample_t* outbuf, int channelspacing, int32_t first_sample, int32_t samples_to_do, int channel) {
     uint8_t frame_info;
     int32_t coef1, coef2;
     int i, sample_count, shift;

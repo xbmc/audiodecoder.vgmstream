@@ -2,7 +2,16 @@
 # vgmstream makefile
 ###############################
 
-### defs
+ifeq ($(VGMSTREAM_VERSION),)
+  # for current dir (expanded later)
+  VGMSTREAM_VERSION=`sh ./version-get.sh`
+else
+  VGMSTREAM_VERSION=$(VGMSTREAM_VERSION)
+endif
+DEF_CFLAGS += -DVGMSTREAM_VERSION_AUTO -DVGM_LOG_OUTPUT
+
+###############################################################################
+### external defs
 # currently aimed to WIN32 builds but vgmstream_cli should work for others (or use autotools instead)
 export TARGET_OS = $(OS)
 
@@ -43,12 +52,193 @@ else
   #DLLTOOL = i586-mingw32msvc-dlltool
 
 endif
-
 export RMF SHELL CC AR STRIP WINDRES DLLTOOL
 
 
-### targets
+###############################################################################
+### build defs
 
+DEF_CFLAGS += -ffast-math -O3 -Wall -Werror=format-security -Wdeclaration-after-statement -Wvla -Wimplicit-function-declaration -Wignored-qualifiers
+
+VGM_DEBUG_FLAGS = 0
+ifeq ($(VGM_DEBUG_FLAGS),1)
+  #DEF_CFLAGS += -O0
+  DEF_CFLAGS += -g -DVGM_DEBUG_OUTPUT
+  DEF_CFLAGS += -Wall
+  DEF_CFLAGS += -Wextra
+  DEF_CFLAGS += -Wno-sign-compare
+  DEF_CFLAGS += -Wlogical-op
+  #DEF_CFLAGS += -pedantic -Wconversion -std=gnu90
+  #DEF_CFLAGS += -Wfloat-equal
+  DEF_CFLAGS += -Wdisabled-optimization -Wunsafe-loop-optimizations -Wswitch-default
+  DEF_CFLAGS +=  -Wcast-qual -Wpointer-arith
+  DEF_CFLAGS += -Wcast-align=strict -Wduplicated-cond -Wjump-misses-init -Wnull-dereference
+  DEF_CFLAGS += -Wold-style-definition -Wstrict-prototypes
+  DEF_CFLAGS += -Wmultistatement-macros -Wstringop-truncation
+  DEF_CFLAGS += -Wredundant-decls -Wmissing-include-dirs -Wmissing-declarations
+  #DEF_CFLAGS += -Wshadow
+  #DEF_CFLAGS += -Wstack-protector -fstack-protector
+  STRIP = echo
+endif
+
+LIBS_CFLAGS=
+LIBS_LDFLAGS=
+LIBS_TARGET_EXT_LIBS=
+
+# config libs
+VGM_G7221 = 1
+ifneq ($(VGM_G7221),0)
+  LIBS_CFLAGS  += -DVGM_USE_G7221
+endif
+
+
+### external libs
+# (call "make VGM_xxx = 0/1" to override 0/1 defaults, as Make does)
+ifeq ($(TARGET_OS),Windows_NT)
+
+  # enabled by default on Windows
+  VGM_VORBIS = 1
+  ifneq ($(VGM_VORBIS),0)
+    LIBS_CFLAGS  += -DVGM_USE_VORBIS
+    LIBS_LDFLAGS += -lvorbis
+    LIBS_TARGET_EXT_LIBS += libvorbis.a
+  endif
+
+  VGM_MPEG = 1
+  ifneq ($(VGM_MPEG),0)
+    LIBS_CFLAGS  += -DVGM_USE_MPEG
+    LIBS_LDFLAGS += -lmpg123-0
+    LIBS_TARGET_EXT_LIBS += libmpg123-0.a
+  endif
+
+  VGM_G719 = 1
+  ifneq ($(VGM_G719),0)
+    LIBS_CFLAGS  += -DVGM_USE_G719
+    LIBS_LDFLAGS += -lg719_decode
+    LIBS_TARGET_EXT_LIBS += libg719_decode.a
+  endif
+
+  VGM_MAT3P = 0
+  ifneq ($(VGM_MAT3P),0)
+    LIBS_CFLAGS  += -DVGM_USE_MAIATRAC3PLUS
+    LIBS_LDFLAGS += -lat3plusdecoder
+    LIBS_TARGET_EXT_LIBS += libat3plusdecoder.a
+  endif
+
+  VGM_FFMPEG = 1
+  ifneq ($(VGM_FFMPEG),0)
+    LIBS_CFLAGS  += -DVGM_USE_FFMPEG -I../ext_includes/ffmpeg
+    LIBS_LDFLAGS += -lavcodec -lavformat -lavutil -lswresample
+    LIBS_TARGET_EXT_LIBS += libavcodec.a libavformat.a libavutil.a libswresample.a
+  endif
+
+  VGM_ATRAC9 = 1
+  ifneq ($(VGM_ATRAC9),0)
+    LIBS_CFLAGS  += -DVGM_USE_ATRAC9
+    LIBS_LDFLAGS += -latrac9
+    LIBS_TARGET_EXT_LIBS += libatrac9.a
+  endif
+
+  VGM_CELT = 1
+  ifneq ($(VGM_CELT),0)
+    LIBS_CFLAGS  += -DVGM_USE_CELT
+    LIBS_LDFLAGS += -lcelt-0061 -lcelt-0110
+    LIBS_TARGET_EXT_LIBS += libcelt-0061.a libcelt-0110.a
+  endif
+
+  VGM_SPEEX = 1
+  ifneq ($(VGM_SPEEX),0)
+    LIBS_CFLAGS  += -DVGM_USE_SPEEX
+    LIBS_LDFLAGS +=  -L../ext_libs/libspeex -lspeex
+    LIBS_TARGET_EXT_LIBS += libspeex/libspeex.a
+  endif
+
+else
+
+  # must install system libs and enable manually on Linux
+  VGM_VORBIS = 0
+  ifneq ($(VGM_VORBIS),0)
+    LIBS_CFLAGS  += -DVGM_USE_VORBIS
+    LIBS_LDFLAGS += -lvorbis -lvorbisfile
+  endif
+
+  VGM_MPEG = 0
+  ifneq ($(VGM_MPEG),0)
+    LIBS_CFLAGS  += -DVGM_USE_MPEG
+    LIBS_LDFLAGS += -lmpg123
+  endif
+
+  VGM_G719 = 0
+  ifneq ($(VGM_G719),0)
+    LIBS_CFLAGS  += -DVGM_USE_G719
+    LIBS_LDFLAGS += -lg719_decode
+  endif
+
+  VGM_MAT3P = 0
+  ifneq ($(VGM_MAT3P),0)
+    LIBS_CFLAGS  += -DVGM_USE_MAIATRAC3PLUS
+    LIBS_LDFLAGS += -lat3plusdecoder
+  endif
+
+  VGM_FFMPEG = 0
+  ifneq ($(VGM_FFMPEG),0)
+    LIBS_CFLAGS  += -DVGM_USE_FFMPEG
+    LIBS_LDFLAGS += -lavcodec -lavformat -lavutil -lswresample
+  endif
+
+  VGM_ATRAC9 = 0
+  ifneq ($(VGM_ATRAC9),0)
+    LIBS_CFLAGS  += -DVGM_USE_ATRAC9
+    ifeq ($(VGM_ATRAC9),1)
+      LIBS_LDFLAGS += -latrac9
+    endif
+    ifeq ($(VGM_ATRAC9),2)
+      LIBS_LDFLAGS += -l:libatrac9.a
+    endif
+  endif
+
+  VGM_CELT = 0
+  ifneq ($(VGM_CELT),0)
+    LIBS_CFLAGS  += -DVGM_USE_CELT
+    ifeq ($(VGM_CELT),1)
+      LIBS_LDFLAGS += -lcelt-0061 -lcelt-0110
+    endif
+    ifeq ($(VGM_CELT),2)
+      LIBS_LDFLAGS += -l:libcelt-0061.a -l:libcelt-0110.a
+    endif
+  endif
+
+  VGM_SPEEX = 0
+  ifneq ($(VGM_SPEEX),0)
+    LIBS_CFLAGS  += -DVGM_USE_SPEEX
+    LIBS_LDFLAGS +=  -lspeex
+  endif
+endif
+
+export DEF_CFLAGS LIBS_CFLAGS LIBS_LDFLAGS LIBS_TARGET_EXT_LIBS
+
+
+###############################################################################
+### internal defs
+ifeq ($(TARGET_OS),Windows_NT)
+  ZIP_FILES  = COPYING
+  ZIP_FILES += README.md
+  ZIP_FILES += cli/test.exe
+  ZIP_FILES += winamp/in_vgmstream.dll
+  ZIP_FILES += xmplay/xmp-vgmstream.dll
+  ZIP_FILES += ext_libs/*.dll
+  ZIP_FILES += ext_libs/libspeex/*.dll
+  ZIP_FILES_AO  = cli/vgmstream123.exe
+  ZIP_FILES_AO += $(LIBAO_DLL_PATH)/*.dll
+else
+  ZIP_FILES  = COPYING
+  ZIP_FILES += README.md
+  ZIP_FILES += cli/vgmstream-cli
+  ZIP_FILES_AO  = cli/vgmstream123
+endif
+
+###############################################################################
+### targets
 buildrelease: clean bin
 
 buildrelease-ex: clean bin-ex
@@ -56,32 +246,37 @@ buildrelease-ex: clean bin-ex
 buildfullrelease: clean sourceball bin
 
 sourceball:
-	rm -rf vgmstream-`./version.sh`
-	git checkout-index -f -a --prefix=vgmstream-`./version.sh`/
-#	git archive --format zip --output vgmstream-`./version.sh`.zip master
-	echo "#!/bin/sh" > vgmstream-`./version.sh`/version.sh
-	echo "echo \"`./version.sh`\"" >> vgmstream-`./version.sh`/version.sh
-	tar cvzf "vgmstream-`./version.sh`.tar.gz" vgmstream-`./version.sh`/*
-	rm -rf vgmstream-`./version.sh`
+	rm -rf vgmstream-$(VGMSTREAM_VERSION)
+	git checkout-index -f -a --prefix=vgmstream-$(VGMSTREAM_VERSION)/
+#	git archive --format zip --output vgmstream-$(VGMSTREAM_VERSION).zip master
+	echo "#!/bin/sh" > vgmstream-$(VGMSTREAM_VERSION)/version-get.sh
+	echo "echo \"$(VGMSTREAM_VERSION)\"" >> vgmstream-$(VGMSTREAM_VERSION)/version-get.sh
+	tar cvzf "vgmstream-$(VGMSTREAM_VERSION)-src.tar.gz" vgmstream-$(VGMSTREAM_VERSION)/*
+	rm -rf vgmstream-$(VGMSTREAM_VERSION)
 
-bin mingwbin: vgmstream_cli winamp xmplay
-	zip -FS -j "vgmstream-`./version.sh`-test.zip" COPYING README.md cli/test.exe winamp/in_vgmstream.dll xmplay/xmp-vgmstream.dll ext_libs/*.dll
+bin: vgmstream_cli winamp xmplay
+	mkdir -p bin
+	zip -FS -j "bin/vgmstream-$(VGMSTREAM_VERSION).zip" $(ZIP_FILES)
 
 #separate since vgmstream123 is kinda untested
-bin-ex mingwbin-ex: vgmstream_cli winamp xmplay vgmstream123
-	zip -FS -j "vgmstream-`./version.sh`-test.zip" COPYING README.md cli/test.exe cli/vgmstream123.exe winamp/in_vgmstream.dll xmplay/xmp-vgmstream.dll ext_libs/*.dll $(LIBAO_DLL_PATH)/*.dll
+bin-ex: vgmstream_cli winamp xmplay vgmstream123
+	mkdir -p bin
+	zip -FS -j "bin/vgmstream-$(VGMSTREAM_VERSION).zip" $(ZIP_FILES) $(ZIP_FILES_AO)
 
-vgmstream_cli mingw_test:
+vgmstream_cli: version
 	$(MAKE) -C cli vgmstream_cli
 
-vgmstream123:
+vgmstream123: version
 	$(MAKE) -C cli vgmstream123
 
-winamp mingw_winamp:
+winamp: version
 	$(MAKE) -C winamp in_vgmstream
 
-xmplay mingw_xmplay:
+xmplay: version
 	$(MAKE) -C xmplay xmp_vgmstream
+
+version:
+	sh version-make.sh
 
 clean:
 	$(RMF) vgmstream-*.zip
@@ -91,6 +286,4 @@ clean:
 	$(MAKE) -C xmplay clean
 	$(MAKE) -C ext_libs clean
 
-.PHONY: clean buildfullrelease buildrelease sourceball bin vgmstream_cli winamp xmplay mingwbin mingw_test mingw_winamp mingw_xmplay
-
-#deprecated: buildfullrelease sourceball mingwbin mingw_test mingw_winamp mingw_xmplay
+.PHONY: clean buildfullrelease buildrelease sourceball bin vgmstream_cli winamp   

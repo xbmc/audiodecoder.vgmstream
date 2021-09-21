@@ -3,8 +3,24 @@
 add_executable(vgmstream_cli
 	vgmstream_cli.c)
 
+if(WIN32)
+	set_target_properties(vgmstream_cli PROPERTIES
+		PREFIX ""
+		OUTPUT_NAME "test")
+else()
+	set_target_properties(vgmstream_cli PROPERTIES
+		PREFIX ""
+		OUTPUT_NAME "vgmstream-cli")
+endif()
+
 # Link to the vgmstream library
 target_link_libraries(vgmstream_cli libvgmstream)
+
+# Link to Jansson, if we have it
+if (JANSSON_FOUND)
+    target_compile_definitions(vgmstream_cli PRIVATE HAVE_JSON)
+	target_link_libraries(vgmstream_cli jansson)
+endif()
 
 setup_target(vgmstream_cli TRUE)
 
@@ -25,7 +41,7 @@ if(WIN32)
 		add_dependencies(vgmstream_cli version_h)
 	elseif(MINGW)
 		if(VGMSTREAM_VERSION)
-			target_compile_definitions(vgmstream_cli PRIVATE VERSION="${VGMSTREAM_VERSION}")
+			target_compile_definitions(vgmstream_cli PRIVATE VGMSTREAM_VERSION="${VGMSTREAM_VERSION}")
 		endif()
 
 		# Also, on MinGW when using GCC, these flags need to be included to prevent requiring MinGW's runtime DLLs from being included, which does unfortunately increase the size of the EXE
@@ -39,8 +55,10 @@ if(WIN32)
 	install_dlls(${CMAKE_INSTALL_PREFIX}/bin)
 elseif(VGMSTREAM_VERSION)
 	# Include the version string
-	target_compile_definitions(vgmstream_cli PRIVATE VERSION="${VGMSTREAM_VERSION}")
+	target_compile_definitions(vgmstream_cli PRIVATE VGMSTREAM_VERSION="${VGMSTREAM_VERSION}")
 endif()
+
+
 
 # Install the CLI program
 install(TARGETS vgmstream_cli
@@ -48,7 +66,7 @@ install(TARGETS vgmstream_cli
 
 # TODO: Make it so vgmstream123 can build with Windows (this probably needs a libao.dll included with vgmstream, though)
 
-if(NOT WIN32)
+if(NOT WIN32 AND USE_V123)
 	# vgmstream123
 
 	add_executable(vgmstream123
@@ -57,16 +75,18 @@ if(NOT WIN32)
 	# Link to the vgmstream library as well as libao
 	target_link_libraries(vgmstream123
 		libvgmstream
-		${AO_LIBRARY})
+		ao dl)
 
 	setup_target(vgmstream123 TRUE)
 
 	# Add AO include directory
 	target_include_directories(vgmstream123 PRIVATE
-		${AO_INCLUDE_DIR})
+		${LIBAO_INCLUDE})
 
 	# Include the version string
-	target_compile_definitions(vgmstream123 PRIVATE VERSION="${VGMSTREAM_VERSION}")
+	target_compile_definitions(vgmstream123 PRIVATE VGMSTREAM_VERSION="${VGMSTREAM_VERSION}")
+
+	
 
 	# Install vgmstream123
 	install(TARGETS vgmstream123

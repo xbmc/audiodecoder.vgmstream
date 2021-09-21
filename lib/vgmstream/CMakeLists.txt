@@ -1,13 +1,9 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.6)
 project(vgmstream C)
 enable_language(CXX)
 
-# TODO: Figure out why MinGW-w64 doesn't build
-
-if(MINGW)
-	message(FATAL_ERROR "Cannot currently build with MinGW")
-endif()
-
+# TODO defautl out-of-source-builds not working properly?
+# (like "cmake .." from ./build subdir creates makefiles on ./, unless using "cmake -S ..")
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
   set(VGM_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
@@ -18,33 +14,194 @@ set(VGM_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_MODULE_PATH ${VGM_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH})
 include(vgmstream)
 
+# Defaults for Windows, otherwise may be Program Files/vgmstream
+if(WIN32)
+  IF(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    SET(CMAKE_INSTALL_PREFIX ${VGM_SOURCE_DIR} CACHE PATH "..." FORCE)
+  ENDIF(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+endif()
+
+function(set_mpeg onoff useForce)
+  if(useForce)
+    set(USE_FORCE_ FORCE)
+  endif()
+  set(USE_MPEG ${onoff} CACHE BOOL "Use libmpg123 for support of MPEG (MP1/MP2/MP3)" ${USE_FORCE_})
+endfunction()
+
+function(set_vorbis onoff useForce)
+  if(useForce)
+    set(USE_FORCE_ FORCE)
+  endif()
+  set(USE_VORBIS ${onoff} CACHE BOOL "Use libvorbis for support of Vorbis" ${USE_FORCE_})
+endfunction()
+
+function(set_ffmpeg onoff useForce)
+  if(useForce)
+    set(USE_FORCE_ FORCE)
+  endif()
+  set(USE_FFMPEG ${onoff} CACHE BOOL "Use FFmpeg for support of many codecs" ${USE_FORCE_})
+endfunction()
+
+function(add_library_path lib_name static lib_path)
+	if(static)
+		add_library(${lib_name} STATIC IMPORTED)
+		set_target_properties(${lib_name} PROPERTIES IMPORTED_LOCATION ${lib_path}.a)
+	else()
+		add_library(${lib_name} SHARED IMPORTED)
+		set_target_properties(${lib_name} PROPERTIES IMPORTED_LOCATION ${lib_path}.so)
+	endif()
+endfunction()
+
 # Options
-option(USE_MPEG "Use libmpg123 for support of MPEG (MP1/MP2/MP3)" ON)
-option(USE_VORBIS "Use libvorbis for support of Vorbis" ON)
-option(USE_FFMPEG "Use FFmpeg for support of many codecs" ON)
+set_mpeg(ON FALSE)
+set_vorbis(ON FALSE)
+set_ffmpeg(ON FALSE)
 option(USE_MAIATRAC3PLUS "Use MAIATRAC3+ for support of ATRAC3+" OFF)
 set(MAIATRAC3PLUS_PATH CACHE PATH "Path to MAIATRAC3+")
 option(USE_G7221 "Use G7221 for support of ITU-T G.722.1 annex C" ON)
+option(USE_G719 "Use libg719_decode for support ITU-T G.719" ON)
+option(USE_ATRAC9 "Use LibAtrac9 for support of ATRAC9" ON)
 if(WIN32)
 	# May need to see if it is possible to get these to work on non-Windows systems too
-	option(USE_G719 "Use libg719_decode for support ITU-T G.719" ON)
-	option(USE_ATRAC9 "Use LibAtrac9 for support of ATRAC9" ON)
 	option(USE_CELT "Use libcelt for support of FSB CELT versions 0.6.1 and 0.11.0" ON)
+endif()
+option(USE_SPEEX "Use libspeex for support of SPEEX" ON)
+if(NOT WIN32)
+	option(USE_JANSSON "Use jansson for JSON dumping" ON)
+	
+	set(MPEG_PATH CACHE PATH "Path to mpg123")
+	set(FFMPEG_PATH CACHE PATH "Path to FFmpeg")
+	set(G719_PATH CACHE PATH "Path to G.719 decoder")
+	set(ATRAC9_PATH CACHE PATH "Path to LibAtrac9")
+	set(LIBAO_PATH CACHE PATH "Path to libao")
 endif()
 
 # Build choices
 option(BUILD_CLI "Build vgmstream CLI" ON)
 if(WIN32)
-	option(BUILD_FB2K "Build foobar2000 component" ON)
-	set(FB2K_SDK_PATH CACHE PATH "Path to foobar2000 SDK")
-	set(WTL_INCLUDE_PATH CACHE PATH "Path to WTL include directory")
-	set(FB2K_COMPONENT_INSTALL_PREFIX CACHE PATH "Path to foobar2000 component installation directory")
+	if(MSVC)
+		option(BUILD_FB2K "Build foobar2000 component" ON)
+		set(FB2K_SDK_PATH CACHE PATH "Path to foobar2000 SDK")
+		set(WTL_INCLUDE_PATH CACHE PATH "Path to WTL include directory")
+		set(FB2K_COMPONENT_INSTALL_PREFIX CACHE PATH "Path to foobar2000 component installation directory")
+	endif()
 	option(BUILD_WINAMP "Build Winamp plugin" ON)
 	set(WINAMP_INSTALL_PREFIX CACHE PATH "Path to Winamp installation directory")
 	option(BUILD_XMPLAY "Build XMPlay plugin" ON)
 	set(XMPLAY_INSTALL_PREFIX CACHE PATH "Path to XMPlay installation directory")
 else()
+	option(BUILD_STATIC "Build statically linked binary" OFF)
+	if(BUILD_STATIC)
+		option(BUILD_V123 "Build vgmstream123 player" OFF)
+	else()
+		option(BUILD_V123 "Build vgmstream123 player" ON)
+	endif()
 	option(BUILD_AUDACIOUS "Build Audacious plugin" ON)
+endif()
+
+# Static builds will link all libraries statically
+if(BUILD_STATIC)
+	set(BUILD_SHARED_LIBS OFF)
+	set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -static")
+	
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(PC_OPUS REQUIRED opus>=1.1)
+	
+	# Incompatible with static builds
+	set(BUILD_AUDACIOUS OFF)
+endif()
+
+# Autodetect some paths
+if(MSVC AND NOT FB2K_SDK_PATH AND IS_DIRECTORY "${VGM_SOURCE_DIR}/dependencies/foobar/")
+    set(FB2K_SDK_PATH "${VGM_SOURCE_DIR}/dependencies/foobar/"  CACHE PATH "..." FORCE)
+endif()
+if(MSVC AND NOT WTL_INCLUDE_PATH AND IS_DIRECTORY "${VGM_SOURCE_DIR}/dependencies/wtl/")
+    set(WTL_INCLUDE_PATH "${VGM_SOURCE_DIR}/dependencies/wtl/"  CACHE PATH "..." FORCE)
+endif()
+
+# Set autogenerated version
+if(MSVC)
+	set(VGM_VERSION_GENERATOR version-make.bat)
+	add_custom_command(OUTPUT ${VGM_SOURCE_DIR}/version_auto.h
+		COMMAND "${VGM_SOURCE_DIR}/${VGM_VERSION_GENERATOR}"
+		DEPENDS ${VGM_SOURCE_DIR}/${VGM_VERSION_GENERATOR})
+else()
+	# linux uses 'sh' so git-less (src zip) builds can run without chmod -x (script)
+	set(VGM_VERSION_GENERATOR version-make.sh)
+	add_custom_command(OUTPUT ${VGM_SOURCE_DIR}/version_auto.h
+		COMMAND sh "${VGM_SOURCE_DIR}/${VGM_VERSION_GENERATOR}"
+		DEPENDS ${VGM_SOURCE_DIR}/${VGM_VERSION_GENERATOR})
+endif()
+add_custom_target(version_h ALL DEPENDS ${VGM_SOURCE_DIR}/version_auto.h)
+
+if(NOT WIN32)
+	find_package(Git QUIET)
+	if(Git_FOUND)
+		include(FetchContent)
+	endif()
+endif()
+
+# FFmpeg detection
+if(USE_FFMPEG)
+	if(NOT WIN32 AND BUILD_STATIC AND NOT FFMPEG_PATH)
+		if(Git_FOUND)
+			set(FFMPEG_PATH ${VGM_SOURCE_DIR}/dependencies/ffmpeg)
+			FetchContent_Declare(ffmpeg
+				GIT_REPOSITORY https://git.ffmpeg.org/ffmpeg.git
+				SOURCE_DIR ${FFMPEG_PATH}
+				BINARY_DIR ${FFMPEG_PATH}-build
+				SUBBUILD_DIR ${FFMPEG_PATH}-subbuild
+				GIT_TAG n4.4
+				GIT_SHALLOW ON
+			)
+			FetchContent_GetProperties(ffmpeg)
+			if(NOT ffmpeg_POPULATED)
+				FetchContent_Populate(ffmpeg)
+			endif()
+		else()
+			set(USE_FFMPEG OFF)
+		endif()
+	endif()
+	if(NOT WIN32 AND FFMPEG_PATH)
+		if(BUILD_STATIC)
+			set(FF_SHARED --enable-static --disable-shared)
+			set(FF_EXTRA --extra-libs=-static --extra-cflags=--static --pkg-config-flags=--static)
+			set(LINK_EXT .a)
+		else()
+			set(FF_SHARED --disable-static --enable-shared)
+			unset(FF_EXTRA)
+			set(LINK_EXT .so)
+		endif()
+		set(FF_CONF_ARGS ${FF_SHARED} --enable-gpl --disable-doc --disable-ffplay --disable-ffprobe --disable-avdevice --disable-ffmpeg --disable-postproc --disable-avfilter --disable-swscale --disable-network --disable-swscale-alpha --disable-vdpau --disable-dxva2 --disable-amf --disable-cuda --disable-d3d11va --disable-ffnvcodec --disable-nvenc --disable-nvdec --disable-hwaccels --disable-sdl2 --disable-iconv --disable-everything --enable-hwaccels --enable-swresample --enable-libopus --enable-parser=ac3,mpegaudio,xma,vorbis,opus --enable-demuxer=ac3,asf,xwma,mov,oma,ogg,tak,dsf,wav,aac,dts,dtshd,mp3,bink,flac,msf,xmv,caf,ape,smacker,pcm_s8,spdif,mpc,mpc8 --enable-decoder=ac3,wmapro,wmav1,wmav2,wmavoice,wmalossless,xma1,xma2,dca,tak,dsd_lsbf,dsd_lsbf_planar,dsd_mbf,dsd_msbf_planar,aac,atrac3,atrac3p,mp1float,mp2float,mp3float,binkaudio_dct,binkaudio_rdft,flac,pcm_s16be,pcm_s16be_planar,pcm_s16le,pcm_s16le_planar,vorbis,ape,adpcm_ima_qt,smackaud,libopus,pcm_s8,pcm_s8_planar,mpc7,mpc8,alac,adpcm_ima_dk3,adpcm_ima_dk4 --disable-parser=mpeg4video,h263 --disable-decoder=mpeg2video,h263,h264,mpeg1video,mpeg2video,mpeg4,hevc,vp9 --disable-cuvid --disable-version3 ${FF_EXTRA})
+		if(NOT EXISTS ${FFMPEG_PATH}/libavutil/libavutil${LINK_EXT})
+			add_custom_target(FF_MAKE ALL
+				COMMAND ./configure ${FF_CONF_ARGS} && make
+				WORKING_DIRECTORY ${FFMPEG_PATH}
+			)
+		endif()
+		add_library_path(avutil ${BUILD_STATIC} ${FFMPEG_PATH}/libavutil/libavutil)
+		add_library_path(avformat ${BUILD_STATIC} ${FFMPEG_PATH}/libavformat/libavformat)
+		add_library_path(swresample ${BUILD_STATIC} ${FFMPEG_PATH}/libswresample/libswresample)
+		add_library_path(avcodec ${BUILD_STATIC} ${FFMPEG_PATH}/libavcodec/libavcodec)
+	elseif(NOT BUILD_STATIC)
+		find_package(FFmpeg)
+		if(NOT FFMPEG_LIBRARIES)
+			set_ffmpeg(OFF TRUE)
+		else()
+			if(${AVCODEC_VERSION} VERSION_LESS 57)
+				set_ffmpeg(OFF TRUE)
+				message("libavcodec version mismatch ${AVCODEC_VERSION} expected >=57")
+			elseif(${AVUTIL_VERSION} VERSION_LESS 55)
+				set_ffmpeg(OFF TRUE)
+				message("libavutil version mismatch ${AVUTIL_VERSION} expected >=55")
+			elseif(${SWRESAMPLE_VERSION} VERSION_LESS 2)
+				set_ffmpeg(OFF TRUE)
+				message("libswresample version mismatch ${SWRESAMPLE_VERSION} expected >=2")
+			endif()
+		endif()
+	else()
+		set(USE_FFMPEG OFF)
+	endif()
 endif()
 
 if(WIN32)
@@ -55,70 +212,115 @@ if(WIN32)
 		set(CMAKE_RC_COMPILE_OBJECT "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
 	endif(MINGW)
 
-	# Update the version
 	set(CMAKE_EXECUTABLE_SUFFIX .exe)
-	if(MSVC)
-		file(TO_NATIVE_PATH "${VGM_BINARY_DIR}/version.h" VERSION_H_PATH)
-		add_custom_command(OUTPUT ${VGM_BINARY_DIR}/version.h
-			COMMAND "${VGM_SOURCE_DIR}/version.bat"
-			ARGS ${VERSION_H_PATH} VERSION
-			DEPENDS ${VGM_SOURCE_DIR}/version.bat)
-		add_custom_target(version_h DEPENDS ${VGM_BINARY_DIR}/version.h)
-	else()
-		find_package(Git)
-		if(GIT_FOUND)
-			execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --tags
-				WORKING_DIRECTORY ${VGM_SOURCE_DIR}
-				OUTPUT_VARIABLE VGMSTREAM_VERSION
-				OUTPUT_STRIP_TRAILING_WHITESPACE)
-		endif()
-	endif()
+
 else()
-	# Update the version
-	find_package(Git)
-	if(GIT_FOUND)
-		execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --tags
-			WORKING_DIRECTORY ${VGM_SOURCE_DIR}
-			OUTPUT_VARIABLE VGMSTREAM_VERSION
-			OUTPUT_STRIP_TRAILING_WHITESPACE)
-	endif()
 
 	# Find the relevant packages
 	if(USE_MPEG)
-		find_package(MPG123)
-		if(NOT MPG123_FOUND)
+		if(NOT WIN32 AND BUILD_STATIC AND NOT MPEG_PATH)
+			set(MPEG_PATH ${VGM_SOURCE_DIR}/dependencies/mgp123)
+			set(MPEG_FILE ${MPEG_PATH}/mpg123-1.28.2.tar.bz2)
+			if(NOT EXISTS ${MPEG_FILE})
+				file(DOWNLOAD
+					https://downloads.sourceforge.net/mpg123/mpg123-1.28.2.tar.bz2
+					${MPEG_FILE}
+				)
+				file(ARCHIVE_EXTRACT
+					INPUT ${MPEG_FILE}
+					DESTINATION ${MPEG_PATH}
+				)
+			endif()
+			set(MPEG_PATH ${MPEG_PATH}/mpg123-1.28.2)
+		endif()
+		if(NOT WIN32 AND MPEG_PATH)
+			if(BUILD_STATIC)
+				set(MPEG_CONF_ARGS --enable-static=yes --enable-shared=no)
+				set(LINK_EXT .a)
+			else()
+				set(MPEG_CONF_ARGS --enable-static=no --enable-shared=yes)
+				set(LINK_EXT .so)
+			endif()
+			if(NOT EXISTS ${MPEG_PATH}/src/libmpg123/.libs/libmpg123${LINK_EXT})
+				add_custom_target(MPEG_MAKE ALL
+					COMMAND ./configure ${MPEG_CONF_ARGS} && make
+					WORKING_DIRECTORY ${MPEG_PATH}
+				)
+			endif()
+			add_library_path(mpg123 ${BUILD_STATIC} ${MPEG_PATH}/src/libmpg123/.libs/libmpg123)
+		elseif(NOT BUILD_STATIC)
+			find_package(MPG123)
+			if(NOT MPG123_FOUND)
+				set_mpeg(OFF TRUE)
+			endif()
+		else()
 			set(USE_MPEG OFF)
 		endif()
 	endif()
 	if(USE_VORBIS)
 		find_package(VorbisFile)
 		if(NOT VORBISFILE_FOUND)
-			set(USE_VORBIS OFF)
-		endif()
-	endif()
-	if(USE_FFMPEG)
-		find_package(FFmpeg)
-		if(NOT FFMPEG_LIBRARIES)
-			set(USE_FFMPEG OFF)
+			set_vorbis(OFF TRUE)
 		endif()
 	endif()
 
 	# If building the CLI, we need to include AO as well
-	if(BUILD_CLI)
-		find_package(AO)
-		if(NOT AO_FOUND)
-			message(FATAL_ERROR "Cannot build vgmstream123 without libao")
+	if(BUILD_V123)
+		if(LIBAO_PATH)
+			if(BUILD_STATIC)
+				set(LIBAO_CONF_ARGS --enable-static=yes --enable-shared=no)
+				set(LINK_EXT .a)
+			else()
+				set(LIBAO_CONF_ARGS --enable-static=no --enable-shared=yes)
+				set(LINK_EXT .so)
+			endif()
+			if(NOT EXISTS ${LIBAO_PATH}/src/.libs/libao${LINK_EXT})
+				add_custom_target(LIBAO_MAKE ALL
+					COMMAND ./autogen.sh && ./configure ${LIBAO_CONF_ARGS} && make
+					WORKING_DIRECTORY ${LIBAO_PATH}
+				)
+			endif()
+			add_library_path(ao ${BUILD_STATIC} ${LIBAO_PATH}/src/.libs/libao)
+			set(LIBAO_INCLUDE ${LIBAO_PATH}/include)
+			set(USE_V123 ON)
+		elseif(NOT BUILD_STATIC)
+			find_package(AO)
+			if(AO_FOUND)
+				set(LIBAO_INCLUDE ${AO_INCLUDE_DIR})
+				set(USE_V123 ON)
+			else()
+				set(USE_V123 OFF)
+			endif()
+		else()
+			message(FATAL_ERROR "Path to libao must be set. (Use LIBAO_PATH)")
+			set(USE_V123 OFF)
+		endif()
+	else()
+		set(USE_V123 OFF)
+	endif()
+
+	find_package(PkgConfig REQUIRED)
+
+	# Only build JSON dumping capabilities on Linux
+	if(USE_JANSSON)
+		pkg_check_modules(JANSSON jansson>=2.3)
+		if(JANSSON_FOUND)
+			set(JANSSON_PKG libjansson)
+			include_directories(${JANSSON_INCLUDE_DIRS})
+			link_directories(${JANSSON_LIBRARY_DIRS})
+		else()
+			set(USE_JANSSON OFF)
 		endif()
 	endif()
 
 	# If building Audacious, we need to make sure we can find its pkg-config module as well as GTK's
 	if(BUILD_AUDACIOUS)
-		include(FindPkgConfig)
 		pkg_search_module(AUDACIOUS REQUIRED audacious>=3.6)
 		pkg_get_variable(AUDACIOUS_PLUGIN_DIR audacious plugin_dir)
 		pkg_search_module(GTK REQUIRED gtk+-3.0 gtk+-2.0)
 	endif()
 endif()
+
 
 # Set compiler flags
 if(CMAKE_CXX_COMPILER_ID MATCHES Clang OR CMAKE_CXX_COMPILER_ID MATCHES GNU)
@@ -164,6 +366,73 @@ if(USE_MAIATRAC3PLUS)
 		add_subdirectory(${MAIATRAC3PLUS_PATH}/MaiAT3PlusDecoder ${VGM_BINARY_DIR}/maitrac3plus)
 	else()
 		message(FATAL_ERROR "Path to MAIATRAC3+ must be set. (Use MAIATRAC3PLUS_PATH)")
+	endif()
+endif()
+if(NOT WIN32)
+	if(USE_G719)
+		if(NOT G719_PATH)
+			if(Git_FOUND)
+				set(G719_PATH ${VGM_SOURCE_DIR}/dependencies/libg719_decode)
+				FetchContent_Declare(libg719_decode
+					GIT_REPOSITORY https://github.com/kode54/libg719_decode
+					SOURCE_DIR ${G719_PATH}
+					BINARY_DIR ${G719_PATH}-build
+					SUBBUILD_DIR ${G719_PATH}-subbuild
+					GIT_SHALLOW ON
+				)
+				FetchContent_GetProperties(libg719_decode)
+				if(NOT libg719_decode_POPULATED)
+					FetchContent_Populate(libg719_decode)
+				endif()
+			else()
+				set(USE_G719 OFF)
+			endif()
+		endif()
+		if(G719_PATH)
+			configure_file(
+				${VGM_SOURCE_DIR}/ext_libs/libg719_decode/CMakeLists.txt
+				${G719_PATH}/
+			COPYONLY)
+			add_subdirectory(${G719_PATH})
+		endif()
+	endif()
+	if(USE_ATRAC9)
+		if(NOT ATRAC9_PATH)
+			if(Git_FOUND)
+				set(ATRAC9_PATH ${VGM_SOURCE_DIR}/dependencies/LibAtrac9)
+				FetchContent_Declare(ATRAC9_FETCH
+					GIT_REPOSITORY https://github.com/Thealexbarney/LibAtrac9
+					SOURCE_DIR ${ATRAC9_PATH}
+					BINARY_DIR ${ATRAC9_PATH}-build
+					SUBBUILD_DIR ${ATRAC9_PATH}-subbuild
+					GIT_SHALLOW ON
+				)
+				FetchContent_GetProperties(ATRAC9_FETCH)
+				if(NOT ATRAC9_FETCH_POPULATED)
+					FetchContent_Populate(ATRAC9_FETCH)
+				endif()
+			else()
+				set(USE_ATRAC9 OFF)
+			endif()
+		endif()
+		if(ATRAC9_PATH)
+			if(NOT EXISTS ${ATRAC9_PATH}/C/bin/libatrac9.a)
+				add_custom_target(ATRAC9_MAKE ALL
+					COMMAND make static CFLAGS="-fPIC"
+					WORKING_DIRECTORY ${ATRAC9_PATH}/C
+				)
+			endif()
+			add_library(atrac9 STATIC IMPORTED)
+			set_target_properties(atrac9 PROPERTIES
+				IMPORTED_LOCATION ${ATRAC9_PATH}/C/bin/libatrac9.a
+			)
+		endif()
+	endif()
+	if(USE_SPEEX)
+		find_package(Speex)
+		if(NOT Speex_FOUND)
+			set(USE_SPEEX OFF)
+		endif()
 	endif()
 endif()
 add_subdirectory(src)
@@ -218,11 +487,12 @@ message(STATUS "      Vorbis: ${USE_VORBIS}")
 message(STATUS "      FFmpeg: ${USE_FFMPEG}")
 message(STATUS "  MAIATRAC3+: ${USE_MAIATRAC3PLUS}")
 message(STATUS "     G.722.1: ${USE_G7221}")
+message(STATUS "       G.719: ${USE_G719}")
+message(STATUS "      ATRAC9: ${USE_ATRAC9}")
 if(WIN32)
-	message(STATUS "       G.719: ${USE_G719}")
-	message(STATUS "      ATRAC9: ${USE_ATRAC9}")
-	message(STATUS "    FSB CELT: ${USE_CELT}")
+    message(STATUS "    FSB CELT: ${USE_CELT}")
 endif()
+message(STATUS "       SPEEX: ${USE_SPEEX}")
 message(STATUS "")
 
 # Build Summary
@@ -234,8 +504,11 @@ if(WIN32)
 	message(STATUS "       Winamp plugin: ${BUILD_WINAMP}")
 	message(STATUS "       XMPlay plugin: ${BUILD_XMPLAY}")
 else()
-	message(STATUS "CLI/vgmstream123: ${BUILD_CLI}")
+	message(STATUS "             CLI: ${BUILD_CLI}")
+	message(STATUS "    vgmstream123: ${USE_V123}")
+	message(STATUS "    JSON dumping: ${USE_JANSSON}")
 	message(STATUS "Audacious plugin: ${BUILD_AUDACIOUS}")
+	message(STATUS "  Static linking: ${BUILD_STATIC}")
 endif()
 message(STATUS "")
 

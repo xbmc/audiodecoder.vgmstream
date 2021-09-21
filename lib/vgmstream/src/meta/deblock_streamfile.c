@@ -1,4 +1,5 @@
 #include "deblock_streamfile.h"
+#include "../util/log.h"
 
 //todo move to utils or something
 
@@ -23,6 +24,7 @@ static size_t deblock_io_read(STREAMFILE* sf, uint8_t* dest, off_t offset, size_
         data->block_size = 0;
         data->data_size = 0;
         data->skip_size = 0;
+        data->chunk_size = 0;
 
         data->step_count = data->cfg.step_start;
         //data->read_count = data->cfg.read_count;
