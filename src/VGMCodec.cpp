@@ -223,7 +223,7 @@ bool CVGMCodec::ReadTag(const std::string& filename, kodi::addon::AudioDecoderIn
 class ATTRIBUTE_HIDDEN CMyAddon : public kodi::addon::CAddonBase
 {
 public:
-  CMyAddon() {}
+  CMyAddon() = default;
   ADDON_STATUS CreateInstance(int instanceType,
                               const std::string& instanceID,
                               KODI_HANDLE instance,
