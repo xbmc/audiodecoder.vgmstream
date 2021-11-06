@@ -155,10 +155,10 @@ bool CVGMCodec::Init(const std::string& filename,
   return true;
 }
 
-int CVGMCodec::ReadPCM(uint8_t* buffer, int size, int& actualsize)
+int CVGMCodec::ReadPCM(uint8_t* buffer, size_t size, size_t& actualsize)
 {
   if (m_endReached)
-    return -1;
+    return AUDIODECODER_READ_EOF;
 
   bool loopForever = m_loopForEver && ctx.stream->loop_flag;
   if (!loopForever)
@@ -175,7 +175,7 @@ int CVGMCodec::ReadPCM(uint8_t* buffer, int size, int& actualsize)
   actualsize = size;
 
   ctx.pos += size;
-  return 0;
+  return AUDIODECODER_READ_SUCCESS;
 }
 
 int64_t CVGMCodec::Seek(int64_t time)
@@ -220,7 +220,7 @@ bool CVGMCodec::ReadTag(const std::string& filename, kodi::addon::AudioDecoderIn
 
 //------------------------------------------------------------------------------
 
-class ATTRIBUTE_HIDDEN CMyAddon : public kodi::addon::CAddonBase
+class ATTR_DLL_LOCAL CMyAddon : public kodi::addon::CAddonBase
 {
 public:
   CMyAddon() = default;
