@@ -14,7 +14,7 @@ extern "C"
 {
 #include "src/vgmstream.h"
 
-  struct ATTRIBUTE_HIDDEN VGMContext
+  struct ATTR_DLL_LOCAL VGMContext
   {
     STREAMFILE sf;
     kodi::vfs::CFile* file = nullptr;
@@ -25,7 +25,7 @@ extern "C"
 
 } /* extern "C" */
 
-class ATTRIBUTE_HIDDEN CVGMCodec : public kodi::addon::CInstanceAudioDecoder
+class ATTR_DLL_LOCAL CVGMCodec : public kodi::addon::CInstanceAudioDecoder
 {
 public:
   CVGMCodec(KODI_HANDLE instance, const std::string& version);
@@ -41,7 +41,7 @@ public:
             AudioEngineDataFormat& format,
             std::vector<AudioEngineChannel>& channellist) override;
 
-  int ReadPCM(uint8_t* buffer, int size, int& actualsize) override;
+  int ReadPCM(uint8_t* buffer, size_t size, size_t& actualsize) override;
   int64_t Seek(int64_t time) override;
   bool ReadTag(const std::string& filename, kodi::addon::AudioDecoderInfoTag& tag) override;
 
