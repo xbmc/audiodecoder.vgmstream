@@ -82,8 +82,7 @@ extern "C"
 
 bool CVGMCodec::m_loopForEverActive = false;
 
-CVGMCodec::CVGMCodec(KODI_HANDLE instance, const std::string& version)
-  : CInstanceAudioDecoder(instance, version)
+CVGMCodec::CVGMCodec(const kodi::addon::IInstanceInfo& instance) : CInstanceAudioDecoder(instance)
 {
 }
 
@@ -141,13 +140,13 @@ bool CVGMCodec::Init(const std::string& filename,
     channellist = map[ctx.stream->channels - 1];
 
   bitrate = 0;
-  m_loopForEver = kodi::GetSettingBoolean("loopforever");
+  m_loopForEver = kodi::addon::GetSettingBoolean("loopforever");
   if (!m_loopForEverActive && m_loopForEver && ctx.stream->loop_flag)
   {
     m_loopForEverActive = true; // Set static to know on others that becomes active
     m_loopForEverInUse =
         true; // Set to class it's own, to know on desctruction that created from here
-    kodi::QueueNotification(QUEUE_INFO, "", kodi::GetLocalizedString(30002));
+    kodi::QueueNotification(QUEUE_INFO, "", kodi::addon::GetLocalizedString(30002));
   }
 
   m_endReached = false;
@@ -224,13 +223,10 @@ class ATTR_DLL_LOCAL CMyAddon : public kodi::addon::CAddonBase
 {
 public:
   CMyAddon() = default;
-  ADDON_STATUS CreateInstance(int instanceType,
-                              const std::string& instanceID,
-                              KODI_HANDLE instance,
-                              const std::string& version,
-                              KODI_HANDLE& addonInstance) override
+  ADDON_STATUS CreateInstance(const kodi::addon::IInstanceInfo& instance,
+                              KODI_ADDON_INSTANCE_HDL& hdl) override
   {
-    addonInstance = new CVGMCodec(instance, version);
+    hdl = new CVGMCodec(instance);
     return ADDON_STATUS_OK;
   }
   ~CMyAddon() override = default;

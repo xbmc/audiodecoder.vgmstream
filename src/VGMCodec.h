@@ -28,7 +28,7 @@ extern "C"
 class ATTR_DLL_LOCAL CVGMCodec : public kodi::addon::CInstanceAudioDecoder
 {
 public:
-  CVGMCodec(KODI_HANDLE instance, const std::string& version);
+  CVGMCodec(const kodi::addon::IInstanceInfo& instance);
   ~CVGMCodec() override;
 
   bool Init(const std::string& filename,
