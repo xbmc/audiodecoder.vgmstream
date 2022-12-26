@@ -24,6 +24,7 @@
     <summary lang="en_GB">VGM Audio Decoder</summary>
     <summary lang="es_ES">Decodificador de Audio VGM</summary>
     <summary lang="es_MX">Decodificador de audio VGM</summary>
+    <summary lang="fr_FR">Décodeur audio VGM</summary>
     <summary lang="it_IT">VGM Audio Decoder</summary>
     <summary lang="ko_KR">VGM 오디오 디코더</summary>
     <summary lang="nl_NL">VGM audio-decoder</summary>
@@ -36,6 +37,7 @@
     <description lang="en_GB">Video Game Music (VGM) Audio Decoder is a library for playing a wide variety of audio formats used in video games.</description>
     <description lang="es_ES">El Decodificador de audio Video Game Music (VGM) es una librería para reproducir una amplia variedad de formatos de audio usados en videojuegos.</description>
     <description lang="es_MX">El decodificador de audio Video Game Music (VGM, Música de VIdeo Juego) es una librería para reproducir una amplia variedad de formatos de audio utilizados en videojuegos.</description>
+    <description lang="fr_FR">Video Game Music Audio Decoder (VGM) est une bibliothèque permettant de lire une grande variété de formats audio utilisés dans les jeux vidéo.</description>
     <description lang="it_IT">Video Game Music (VGM) Audio Decoder è una libreria per la riproduzione di un&apos;ampia varietà di formati audio utilizzati nei videogiochi.</description>
     <description lang="ko_KR">VGM(비디오 게임 음악) 오디오 디코더는 비디오 게임에 사용되는 다양한 오디오 형식을 재생하기 위한 라이브러리입니다.</description>
     <description lang="nl_NL">Video Game Muziek (VGM) Audio-decoder is een bibliotheek voor het afspelen van een grote varieteit in audioformats gebruikt in videospellen.</description>
