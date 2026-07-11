@@ -173,6 +173,7 @@
     </assets>
     <summary lang="bs_BA">VGM audio dekoder</summary>
     <summary lang="ca_ES">Descodificador d&apos;àudio VGM</summary>
+    <summary lang="cs_CZ">Dekodér zvuku VGM</summary>
     <summary lang="da_DK">VGM lydafkoder</summary>
     <summary lang="de_DE">VGM Audio Decoder</summary>
     <summary lang="en_GB">VGM Audio Decoder</summary>
@@ -192,6 +193,7 @@
     <summary lang="zh_CN">VGM 音频解码器</summary>
     <description lang="bs_BA">Audio dekoder muzike za video igre (VGM) je biblioteka za reprodukciju širokog spektra audio formata koji se koriste u video igrama.</description>
     <description lang="ca_ES">El descodificador d&apos;àudio Video Game Music (VGM) és una biblioteca per reproduir una gran varietat de formats d&apos;àudio utilitzats en videojocs.</description>
+    <description lang="cs_CZ">Dekodér zvuku Video Game Music (VGM) je knihovna pro přehrávání široké škály zvukových formátů používaných ve videohrách.</description>
     <description lang="da_DK">Video Game Music (VGM) lydafkoder er et bibliotek til afspilning af en lang række lydformater, der bruges i videospil.</description>
     <description lang="de_DE">Video Game Music (VGM) Audio Decoder ist eine Bibliothek zum Abspielen einer Vielzahl von Audioformaten, die in Videospielen verwendet werden.</description>
     <description lang="en_GB">Video Game Music (VGM) Audio Decoder is a library for playing a wide variety of audio formats used in video games.</description>
